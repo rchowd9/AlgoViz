@@ -166,4 +166,20 @@ def aStarSearch(graph, start, heuristic):
 
     return result
 
+def greedyBestFirstSearch(graph, start, heuristic):
+    import heapq
 
+    visited = set()
+    priority_queue = [(heuristic[start], start)]  # (heuristic, vertex)
+    result = []
+
+    while priority_queue:
+        heuristic_value, vertex = heapq.heappop(priority_queue)
+        if vertex not in visited:
+            visited.add(vertex)
+            result.append(vertex)
+            for neighbor in graph[vertex]:
+                if neighbor not in visited:
+                    heapq.heappush(priority_queue, (heuristic[neighbor], neighbor))
+
+    return result
