@@ -12,3 +12,15 @@ def breadthFirstSearch(graph, start):
 
     return result
 
+def depthFirstSearch(graph, start, visited=None):
+    if visited is None:
+        visited = set()
+    visited.add(start)
+    result = [start]
+
+    for neighbor in graph[start]:
+        if neighbor not in visited:
+            result.extend(depthFirstSearch(graph, neighbor, visited))
+
+    return result
+
