@@ -145,3 +145,4 @@ def iterativeDeepeningAStarSearch(graph, start, heuristic, max_depth):
     for depth in range(max_depth + 1):
         final_result.extend(a_star_search(graph, start, heuristic, depth))
     return final_result
+
