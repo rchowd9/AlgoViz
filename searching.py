@@ -70,3 +70,50 @@ def uniformCostSearch(graph, start):
 
     return result
 
+def depthLimitedSearch(graph, start, limit, visited=None):
+    if visited is None:
+        visited = set()
+    visited.add(start)
+    result = [start]
+
+    if limit <= 0:
+        return result
+
+    for neighbor in graph[start]:
+        if neighbor not in visited:
+            result.extend(depthLimitedSearch(graph, neighbor, limit - 1, visited))
+
+    return result
+
+def iterativeDeepeningSearch(graph, start, max_depth):
+    result = []
+    for depth in range(max_depth + 1):
+        result.extend(depthLimitedSearch(graph, start, depth))
+    return result
+
+def iterativeDeepeningA-StarSearch(graph, start, heuristic, max_depth):
+    import heapq
+
+    def a_star_search(graph, start, heuristic, depth_limit):
+        visited = set()
+        priority_queue = [(heuristic[start], 0, start)]  # (f_score, g_score, vertex)
+        result = []
+
+        while priority_queue:
+            f_score, g_score, vertex = heapq.heappop(priority_queue)
+            if vertex not in visited:
+                visited.add(vertex)
+                result.append((vertex, g_score))
+                if g_score < depth_limit:
+                    for neighbor, edge_cost in graph[vertex].items():
+                        if neighbor not in visited:
+                            new_g_score = g_score + edge_cost
+                            new_f_score = new_g_score + heuristic[neighbor]
+                            heapq.heappush(priority_queue, (new_f_score, new_g_score, neighbor))
+
+        return result
+
+    final_result = []
+    for depth in range(max_depth + 1):
+        final_result.extend(a_star_search(graph, start, heuristic, depth))
+    return final_result
