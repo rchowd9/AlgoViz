@@ -184,6 +184,22 @@ def greedyBestFirstSearch(graph, start, heuristic):
 
     return result
 
+def reconstruct_path(parents_start, parents_goal, meeting_vertex):
+    path_start = []
+    current = meeting_vertex
+    while current is not None:
+        path_start.append(current)
+        current = parents_start[current]
+    path_start.reverse()
+
+    current = parents_goal[meeting_vertex]
+    while current is not None:
+        path_start.append(current)
+        current = parents_goal[current]
+
+    return path_start
+
+
 def bidirectionalSearch(graph, start, goal):
     from collections import deque
 
