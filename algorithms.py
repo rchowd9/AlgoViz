@@ -14,6 +14,26 @@ def geneticAlgorithm(population, fitness_function, generations, mutation_rate):
     Returns:
     - The best individual found after the specified number of generations.
     """
+    def crossover(parent1, parent2):
+        """Create a child by combining two sequence-based individuals."""
+        crossover_point = random.randint(0, min(len(parent1), len(parent2)))
+        return parent1[:crossover_point] + parent2[crossover_point:]
+
+    def mutate(individual):
+        """Swap two positions in a sequence-based individual."""
+        if len(individual) < 2:
+            return individual
+
+        first, second = random.sample(range(len(individual)), 2)
+        mutated = list(individual)
+        mutated[first], mutated[second] = mutated[second], mutated[first]
+
+        if isinstance(individual, str):
+            return "".join(mutated)
+        if isinstance(individual, tuple):
+            return tuple(mutated)
+        return mutated
+
     for generation in range(generations):
         # Evaluate fitness of the population
         fitness_scores = [fitness_function(individual) for individual in population]
