@@ -235,3 +235,21 @@ def bidirectionalSearch(graph, start, goal):
                     return reconstruct_path(parents_start, parents_goal, neighbor)
 
     return None  # No path found
+
+def andOrGraphSearch(graph, start, goal):
+    visited = set()
+    stack = [(start, [start])]
+    result = []
+
+    while stack:
+        vertex, path = stack.pop()
+        if vertex not in visited:
+            visited.add(vertex)
+            if vertex == goal:
+                result.append(path)
+            else:
+                for neighbor in graph[vertex]:
+                    if neighbor not in visited:
+                        stack.append((neighbor, path + [neighbor]))
+
+    return result
