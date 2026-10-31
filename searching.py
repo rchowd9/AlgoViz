@@ -183,3 +183,39 @@ def greedyBestFirstSearch(graph, start, heuristic):
                     heapq.heappush(priority_queue, (heuristic[neighbor], neighbor))
 
     return result
+
+def bidirectionalSearch(graph, start, goal):
+    from collections import deque
+
+    if start == goal:
+        return [start]
+
+    visited_start = {start}
+    visited_goal = {goal}
+    queue_start = deque([start])
+    queue_goal = deque([goal])
+    parents_start = {start: None}
+    parents_goal = {goal: None}
+
+    while queue_start and queue_goal:
+        # Expand from the start side
+        current_start = queue_start.popleft()
+        for neighbor in graph[current_start]:
+            if neighbor not in visited_start:
+                visited_start.add(neighbor)
+                parents_start[neighbor] = current_start
+                queue_start.append(neighbor)
+                if neighbor in visited_goal:
+                    return reconstruct_path(parents_start, parents_goal, neighbor)
+
+        # Expand from the goal side
+        current_goal = queue_goal.popleft()
+        for neighbor in graph[current_goal]:
+            if neighbor not in visited_goal:
+                visited_goal.add(neighbor)
+                parents_goal[neighbor] = current_goal
+                queue_goal.append(neighbor)
+                if neighbor in visited_start:
+                    return reconstruct_path(parents_start, parents_goal, neighbor)
+
+    return None  # No path found
