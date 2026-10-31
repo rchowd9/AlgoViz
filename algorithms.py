@@ -61,3 +61,36 @@ def geneticAlgorithm(population, fitness_function, generations, mutation_rate):
     # Return the best individual from the final population
     best_individual = max(population, key=fitness_function)
     return best_individual
+
+def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function):
+    """
+    Implements the minimax algorithm for decision making in two-player games.
+
+    Parameters:
+    - state: The current state of the game.
+    - depth: The maximum depth to search.
+    - maximizing_player: Boolean indicating if the current player is maximizing or minimizing.
+    - evaluate_function: Function to evaluate the score of a given state.
+
+    Returns:
+    - The best score for the current player at the given state.
+    """
+    if depth == 0:
+        return evaluate_function(state)
+
+    children = state.get_children()
+    if not children:
+        return evaluate_function(state)
+
+    if maximizing_player:
+        max_eval = float('-inf')
+        for child in children:
+            eval = miniMaxAlgorithm(child, depth - 1, False, evaluate_function)
+            max_eval = max(max_eval, eval)
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for child in children:
+            eval = miniMaxAlgorithm(child, depth - 1, True, evaluate_function)
+            min_eval = min(min_eval, eval)
+        return min_eval
