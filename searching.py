@@ -38,3 +38,19 @@ def treeSearch(graph, start):
 
     return result
 
+def graphSearch(graph, start):
+    visited = set()
+    stack = [start]
+    result = []
+
+    while stack:
+        vertex = stack.pop()
+        if vertex not in visited:
+            visited.add(vertex)
+            result.append(vertex)
+            stack.extend(neighbor for neighbor in graph[vertex] if neighbor not in visited)
+
+    return result
+
+
+
