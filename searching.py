@@ -146,3 +146,23 @@ def iterativeDeepeningAStarSearch(graph, start, heuristic, max_depth):
         final_result.extend(a_star_search(graph, start, heuristic, depth))
     return final_result
 
+def aStarSearch(graph, start, heuristic):
+    import heapq
+
+    visited = set()
+    priority_queue = [(heuristic[start], 0, start)]  # (f_score, g_score, vertex)
+    result = []
+
+    while priority_queue:
+        f_score, g_score, vertex = heapq.heappop(priority_queue)
+        if vertex not in visited:
+            visited.add(vertex)
+            result.append((vertex, g_score))
+            for neighbor, edge_cost in graph[vertex].items():
+                if neighbor not in visited:
+                    new_g_score = g_score + edge_cost
+                    new_f_score = new_g_score + heuristic[neighbor]
+                    heapq.heappush(priority_queue, (new_f_score, new_g_score, neighbor))
+
+    return result
+
