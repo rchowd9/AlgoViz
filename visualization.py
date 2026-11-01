@@ -47,6 +47,8 @@ def parse_graph(graph_data):
 
 
 def _validate_search(graph, start, goal, algorithm, heuristic, max_depth):
+    if not isinstance(start, str) or not isinstance(goal, str):
+        raise ValueError("The starting node and goal must be node names.")
     if start not in graph or goal not in graph:
         raise ValueError("The starting node and goal must both exist in the graph.")
     if algorithm not in SEARCH_ALGORITHMS:
