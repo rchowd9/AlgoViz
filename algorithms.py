@@ -255,3 +255,4 @@ def localBeamSearch(graph, start, beam_width, evaluate_function):
         current_states = sorted(next_states, key=lambda x: evaluate_function(x))[:beam_width]
 
     return result
+
