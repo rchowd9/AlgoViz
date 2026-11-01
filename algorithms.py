@@ -138,4 +138,4 @@ def alphaBetaPruning(state, depth, alpha, beta, maximizing_player, evaluate_func
         return min_eval
 
 
-def hillClimbing 
+def hillClimbing(state, evaluate_function):
