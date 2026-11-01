@@ -229,7 +229,7 @@ def dijikstra(graph, start):
 
     return result
 
-def localBeamSearch(graph, start, beam_width):
+def localBeamSearch(graph, start, beam_width, evaluate_function):
     """
     Implements the local beam search algorithm.
 
@@ -237,6 +237,7 @@ def localBeamSearch(graph, start, beam_width):
     - graph: A dictionary representing the graph where keys are vertices and values are lists of neighbors.
     - start: The starting vertex for the search.
     - beam_width: The number of best states to keep at each level.
+    - evaluate_function: Function that scores a state for selection.
 
     Returns:
     - A list of the best states found after the search.
