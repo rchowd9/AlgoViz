@@ -1,4 +1,6 @@
 import random
+import math
+import random
 
 
 def geneticAlgorithm(population, fitness_function, generations, mutation_rate):
