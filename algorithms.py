@@ -136,3 +136,6 @@ def alphaBetaPruning(state, depth, alpha, beta, maximizing_player, evaluate_func
             if beta <= alpha:
                 break  # Alpha cut-off
         return min_eval
+
+
+def hillClimbing 
