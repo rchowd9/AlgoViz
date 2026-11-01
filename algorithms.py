@@ -341,3 +341,4 @@ def beliefStateUpdate(prior_belief, observation, transition_model, observation_m
             new_belief[state] /= total_probability
 
     return new_belief
+
