@@ -228,3 +228,29 @@ def dijikstra(graph, start):
                     heapq.heappush(priority_queue, (cost + edge_cost, neighbor))
 
     return result
+
+def localBeamSearch(graph, start, beam_width):
+    """
+    Implements the local beam search algorithm.
+
+    Parameters:
+    - graph: A dictionary representing the graph where keys are vertices and values are lists of neighbors.
+    - start: The starting vertex for the search.
+    - beam_width: The number of best states to keep at each level.
+
+    Returns:
+    - A list of the best states found after the search.
+    """
+    current_states = [start]
+    result = []
+
+    while current_states:
+        next_states = []
+        for state in current_states:
+            result.append(state)
+            next_states.extend(graph[state])
+
+        # Keep only the best 'beam_width' states
+        current_states = sorted(next_states, key=lambda x: evaluate_function(x))[:beam_width]
+
+    return result
