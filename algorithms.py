@@ -139,3 +139,31 @@ def alphaBetaPruning(state, depth, alpha, beta, maximizing_player, evaluate_func
 
 
 def hillClimbing(state, evaluate_function):
+    """
+    Implements the hill climbing algorithm for optimization problems.
+
+    Parameters:
+    - state: The initial state of the problem.
+    - evaluate_function: Function to evaluate the score of a given state.
+
+    Returns:
+    - The best state found after hill climbing.
+    """
+    current_state = state
+    current_score = evaluate_function(current_state)
+
+    while True:
+        neighbors = current_state.get_neighbors()
+        if not neighbors:
+            break
+
+        next_state = max(neighbors, key=evaluate_function)
+        next_score = evaluate_function(next_state)
+
+        if next_score <= current_score:
+            break  # No better neighbor found
+
+        current_state = next_state
+        current_score = next_score
+
+    return current_state
