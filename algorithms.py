@@ -269,3 +269,41 @@ def has_cycle(head):
         if slow == fast:
             return True          # cycle found
     return False                 # no cycle
+
+def h_minimax(state, depth, maximizing_player, evaluate_function, heuristic_function=None):
+    """
+    Implements the heuristic minimax algorithm for two-player zero-sum games.
+
+    Parameters:
+    - state: The current game state.
+    - depth: The maximum depth to search.
+    - maximizing_player: Boolean indicating whether the current turn is maximizing.
+    - evaluate_function: Function used to evaluate a state when no heuristic is supplied.
+    - heuristic_function: Optional function used to estimate the value of a state.
+
+    Returns:
+    - The best score for the current player from the given state.
+    """
+    if depth == 0:
+        if heuristic_function is not None:
+            return heuristic_function(state)
+        return evaluate_function(state)
+
+    children = state.get_children() if hasattr(state, "get_children") else []
+    if not children:
+        if heuristic_function is not None:
+            return heuristic_function(state)
+        return evaluate_function(state)
+
+    if maximizing_player:
+        best_score = float('-inf')
+        for child in children:
+            score = h_minimax(child, depth - 1, False, evaluate_function, heuristic_function)
+            best_score = max(best_score, score)
+        return best_score
+
+    best_score = float('inf')
+    for child in children:
+        score = h_minimax(child, depth - 1, True, evaluate_function, heuristic_function)
+        best_score = min(best_score, score)
+    return best_score
