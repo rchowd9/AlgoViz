@@ -209,7 +209,7 @@ with tensorflow_tab:
             ]
         )
         model.compile(optimizer="adam", loss="mse")
-        history = model.fit(x[:, tf.newaxis], y, epochs=epochs, verbose=0)
+        history = model.fit(x[:, tf.newaxis], y[:, tf.newaxis], epochs=epochs, verbose=0)
         prediction = model.predict(x[:, tf.newaxis], verbose=0).reshape(-1).tolist()
         st.session_state["tensorflow_result"] = {
             "target": y.numpy().tolist(),

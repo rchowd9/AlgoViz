@@ -252,7 +252,8 @@ def _bidirectional_search(graph, start, goal):
         right.append(node)
         node = from_goal[node]
     path = left + right
-    return _result(order, path, {path[-1]: len(path) - 1})
+    route_cost = sum(graph[node][neighbor] for node, neighbor in zip(path, path[1:]))
+    return _result(order, path, {path[-1]: route_cost})
 
 
 def _expand_bidirectional_layer(graph, queue, parents, other_parents, order):
