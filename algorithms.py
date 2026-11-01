@@ -96,4 +96,43 @@ def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function):
         return min_eval
 
 
-def alphaBetaPruning 
+def alphaBetaPruning(state, depth, alpha, beta, maximizing_player, evaluate_function):
+    """
+    Implements the minimax algorithm with alpha-beta pruning for decision making in two-player games.
+
+    Parameters:
+    - state: The current state of the game.
+    - depth: The maximum depth to search.
+    - alpha: The best value that the maximizer currently can guarantee at that level or above.
+    - beta: The best value that the minimizer currently can guarantee at that level or above.
+    - maximizing_player: Boolean indicating if the current player is maximizing or minimizing.
+    - evaluate_function: Function to evaluate the score of a given state.
+
+    Returns:
+    - The best score for the current player at the given state.
+    """
+    if depth == 0:
+        return evaluate_function(state)
+
+    children = state.get_children()
+    if not children:
+        return evaluate_function(state)
+
+    if maximizing_player:
+        max_eval = float('-inf')
+        for child in children:
+            eval = alphaBetaPruning(child, depth - 1, alpha, beta, False, evaluate_function)
+            max_eval = max(max_eval, eval)
+            alpha = max(alpha, eval)
+            if beta <= alpha:
+                break  # Beta cut-off
+        return max_eval
+    else:
+        min_eval = float('inf')
+        for child in children:
+            eval = alphaBetaPruning(child, depth - 1, alpha, beta, True, evaluate_function)
+            min_eval = min(min_eval, eval)
+            beta = min(beta, eval)
+            if beta <= alpha:
+                break  # Alpha cut-off
+        return min_eval
