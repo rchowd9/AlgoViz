@@ -374,3 +374,24 @@ def kNearestNeighbors(data, query_point, k):
     most_common_label = Counter(labels).most_common(1)[0][0]
     
     return most_common_label
+
+def euclideanAlgorithm(data, query_point):
+    """
+    Implements a simple nearest neighbor search using Euclidean distance.
+
+    Parameters:
+    - data: A list of tuples where each tuple contains a point and its label (point, label).
+    - query_point: The point for which we want to find the nearest neighbor.
+
+    Returns:
+    - The label of the nearest neighbor.
+    """
+    import math
+
+    def euclidean_distance(point1, point2):
+        return math.sqrt(sum((x - y) ** 2 for x, y in zip(point1, point2)))
+
+    # Find the nearest neighbor
+    nearest_neighbor = min(data, key=lambda x: euclidean_distance(x[0], query_point))
+    
+    return nearest_neighbor[1]
