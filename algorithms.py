@@ -210,3 +210,21 @@ def simulatedAnnealing(state, evaluate_function, initial_temperature, cooling_ra
         temperature *= cooling_rate
 
     return current_state
+
+def dijikstra(graph, start):
+    import heapq
+
+    visited = set()
+    priority_queue = [(0, start)]  # (cost, vertex)
+    result = []
+
+    while priority_queue:
+        cost, vertex = heapq.heappop(priority_queue)
+        if vertex not in visited:
+            visited.add(vertex)
+            result.append((vertex, cost))
+            for neighbor, edge_cost in graph[vertex].items():
+                if neighbor not in visited:
+                    heapq.heappush(priority_queue, (cost + edge_cost, neighbor))
+
+    return result
