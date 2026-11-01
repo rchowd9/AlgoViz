@@ -131,7 +131,7 @@ with search_tab:
             graphviz_source(
                 weighted_graph, start, goal, result["order"], result["path"]
             ),
-            use_container_width=True,
+            width="stretch",
         )
         st.write("**Expansion order:**", " → ".join(result["order"]) or "No nodes expanded")
         st.write(
