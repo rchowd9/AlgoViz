@@ -167,3 +167,44 @@ def hillClimbing(state, evaluate_function):
         current_score = next_score
 
     return current_state
+
+def simulatedAnnealing(state, evaluate_function, initial_temperature, cooling_rate):
+    """
+    Implements the simulated annealing algorithm for optimization problems.
+
+    Parameters:
+    - state: The initial state of the problem.
+    - evaluate_function: Function to evaluate the score of a given state.
+    - initial_temperature: The starting temperature for the annealing process.
+    - cooling_rate: The rate at which the temperature decreases.
+
+    Returns:
+    - The best state found after simulated annealing.
+    """
+    current_state = state
+    current_score = evaluate_function(current_state)
+    temperature = initial_temperature
+
+    while temperature > 1:
+        neighbors = current_state.get_neighbors()
+        if not neighbors:
+            break
+
+        next_state = random.choice(neighbors)
+        next_score = evaluate_function(next_state)
+
+        # Calculate acceptance probability
+        if next_score > current_score:
+            acceptance_probability = 1.0
+        else:
+            acceptance_probability = math.exp((next_score - current_score) / temperature)
+
+        # Decide whether to accept the new state
+        if random.random() < acceptance_probability:
+            current_state = next_state
+            current_score = next_score
+
+        # Cool down the temperature
+        temperature *= cooling_rate
+
+    return current_state
