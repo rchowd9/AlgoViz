@@ -94,3 +94,6 @@ def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function):
             eval = miniMaxAlgorithm(child, depth - 1, True, evaluate_function)
             min_eval = min(min_eval, eval)
         return min_eval
+
+
+def alphaBetaPruning 
