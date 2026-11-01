@@ -307,3 +307,37 @@ def h_minimax(state, depth, maximizing_player, evaluate_function, heuristic_func
         score = h_minimax(child, depth - 1, True, evaluate_function, heuristic_function)
         best_score = min(best_score, score)
     return best_score
+
+def beliefStateUpdate(prior_belief, observation, transition_model, observation_model):
+    """
+    Updates the belief state based on the prior belief, observation, transition model, and observation model.
+
+    Parameters:
+    - prior_belief: A dictionary representing the prior belief state (state -> probability).
+    - observation: The current observation.
+    - transition_model: A function that takes a state and returns a dictionary of next states with their probabilities.
+    - observation_model: A function that takes a state and an observation and returns the probability of that observation given the state.
+
+    Returns:
+    - A new belief state as a dictionary (state -> updated probability).
+    """
+    new_belief = {}
+    total_probability = 0.0
+
+    for state in prior_belief:
+        # Predict step: calculate the predicted belief for each possible next state
+        predicted_belief = 0.0
+        for next_state, transition_prob in transition_model(state).items():
+            predicted_belief += prior_belief[state] * transition_prob
+
+        # Update step: incorporate the observation
+        observation_prob = observation_model(state, observation)
+        new_belief[state] = predicted_belief * observation_prob
+        total_probability += new_belief[state]
+
+    # Normalize the new belief state
+    if total_probability > 0:
+        for state in new_belief:
+            new_belief[state] /= total_probability
+
+    return new_belief
