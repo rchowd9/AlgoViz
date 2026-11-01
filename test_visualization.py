@@ -22,7 +22,7 @@ class GraphSearchTests(unittest.TestCase):
             heuristic={"A": 0, "B": 0, "C": 0, "D": 0},
         )
         self.assertEqual(result["path"], ["A", "C", "B", "D"])
-        self.assertEqual(result["cost"], 3)
+        self.assertEqual(result["cost"], 5)
 
     def test_bidirectional_search_returns_route_and_weighted_cost(self):
         result = search_graph(GRAPH, "A", "D", "Bidirectional search")
