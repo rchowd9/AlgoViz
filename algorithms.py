@@ -342,3 +342,35 @@ def beliefStateUpdate(prior_belief, observation, transition_model, observation_m
 
     return new_belief
 
+def kNearestNeighbors(data, query_point, k):
+    """
+    Implements the k-Nearest Neighbors algorithm.
+
+    Parameters:
+    - data: A list of tuples where each tuple contains a point and its label (point, label).
+    - query_point: The point for which we want to find the nearest neighbors.
+    - k: The number of nearest neighbors to find.
+
+    Returns:
+    - A list of the k nearest neighbors' labels.
+    """
+    from collections import Counter
+    import math
+
+    def euclidean_distance(point1, point2):
+        return math.sqrt(sum((x - y) ** 2 for x, y in zip(point1, point2)))
+
+    # Calculate distances from the query point to all points in the dataset
+    distances = [(euclidean_distance(point, query_point), label) for point, label in data]
+    
+    # Sort by distance and select the k nearest neighbors
+    distances.sort(key=lambda x: x[0])
+    k_nearest_neighbors = distances[:k]
+
+    # Extract the labels of the k nearest neighbors
+    labels = [label for _, label in k_nearest_neighbors]
+
+    # Return the most common label among the k nearest neighbors
+    most_common_label = Counter(labels).most_common(1)[0][0]
+    
+    return most_common_label
