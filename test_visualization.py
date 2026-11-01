@@ -44,6 +44,38 @@ class GraphSearchTests(unittest.TestCase):
         self.assertFalse(result["found"])
         self.assertIsNone(result["path"])
 
+    def test_every_search_method_returns_a_valid_route(self):
+        heuristic = {node: 0 for node in GRAPH}
+        algorithms = (
+            "Breadth-first search",
+            "Depth-first search",
+            "Uniform-cost search",
+            "Greedy best-first search",
+            "A* search",
+            "Depth-limited search",
+            "Iterative deepening search",
+            "Iterative deepening A* search",
+            "Bidirectional search",
+        )
+        for algorithm in algorithms:
+            with self.subTest(algorithm=algorithm):
+                result = search_graph(
+                    GRAPH,
+                    "A",
+                    "D",
+                    algorithm,
+                    heuristic=heuristic,
+                    max_depth=4,
+                )
+                self.assertTrue(result["found"])
+                self.assertEqual(result["path"][0], "A")
+                self.assertEqual(result["path"][-1], "D")
+                route_cost = sum(
+                    GRAPH[node][neighbor]
+                    for node, neighbor in zip(result["path"], result["path"][1:])
+                )
+                self.assertEqual(result["cost"], route_cost)
+
 
 class AlgorithmTraceTests(unittest.TestCase):
     def test_sorting_traces_end_with_sorted_values(self):

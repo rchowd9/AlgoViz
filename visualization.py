@@ -1,6 +1,6 @@
+import heapq
 import json
 import math
-import heapq
 from itertools import count
 
 
