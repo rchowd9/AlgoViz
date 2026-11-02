@@ -272,3 +272,35 @@ def ternarySearch(arr, targetVal):
             right = mid2 - 1
 
     return -1
+
+def fibonacciSearch(arr, targetVal):
+    fibM2 = 0  # (m-2)'th Fibonacci number
+    fibM1 = 1  # (m-1)'th Fibonacci number
+    fibM = fibM2 + fibM1  # m'th Fibonacci number
+
+    while fibM < len(arr):
+        fibM2 = fibM1
+        fibM1 = fibM
+        fibM = fibM2 + fibM1
+
+    offset = -1
+
+    while fibM > 1:
+        i = min(offset + fibM2, len(arr) - 1)
+
+        if arr[i] < targetVal:
+            fibM = fibM1
+            fibM1 = fibM2
+            fibM2 = fibM - fibM1
+            offset = i
+        elif arr[i] > targetVal:
+            fibM = fibM2
+            fibM1 -= 1
+            fibM2 -= 1
+        else:
+            return i
+
+    if fibM1 and offset + 1 < len(arr) and arr[offset + 1] == targetVal:
+        return offset + 1
+
+    return -1
