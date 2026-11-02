@@ -38,3 +38,13 @@ def counting_sort(arr):
    # Copy sorted elements back to original array
    for i in range(size):
        arr[i] = output[i]
+
+def radixSort(arr):
+    max_element = max(arr) # Find the largest number
+    place = 1
+
+# Apply counting sort for each digit place
+    while max_element // place > 0:
+        countingSort(arr, place)
+        place *= 10
+
