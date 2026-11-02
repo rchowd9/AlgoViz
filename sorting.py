@@ -164,6 +164,3 @@ def insertion_sort(arr):
            arr[j + 1] = arr[j]
            j -= 1
        arr[j + 1] = key # Place key at correct position
-data = [12, 11, 13, 5, -1]
-insertion_sort(data)
-print(data) # Output: [-1, 5, 11, 12, 13]
