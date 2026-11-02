@@ -397,3 +397,4 @@ def euclideanAlgorithm(data, query_point):
     nearest_neighbor = min(data, key=lambda x: euclidean_distance(x[0], query_point))
     
     return nearest_neighbor[1]
+
