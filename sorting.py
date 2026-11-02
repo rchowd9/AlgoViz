@@ -81,11 +81,7 @@ def merge(left, right):
        result.append(right[j])
        j += 1
    return result
-# Example usage
-array = [38, 27, 43, 3, 9, 82, 10]
-sorted_array = merge_sort(array)
-print("Original Array:", array)
-print("Sorted Array:", sorted_array)
+
 
 def shell_sort(arr):
    n = len(arr)
@@ -100,11 +96,7 @@ def shell_sort(arr):
                j -= gap
            arr[j] = temp
        gap //= 2 # Reduce the gap
-# Usage
-data = [36, 34, 43, 11, 15, 20, 28, 45]
-print("Before:", data)
-shell_sort(data)
-print("After: ", data)
+
 
 def heapify(arr, n, i):
    # Find the largest among root, left child, and right child
@@ -128,7 +120,4 @@ def heap_sort(arr):
    for i in range(n - 1, 0, -1):
        arr[i], arr[0] = arr[0], arr[i] # Swap
        heapify(arr, i, 0)
-# Example usage
-arr = [12, 11, 13, 5, 6, 7]
-heap_sort(arr)
-print("Sorted array:", arr)
+
