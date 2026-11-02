@@ -225,3 +225,9 @@ def andOrGraphSearch(graph, start, goal):
                         stack.append((neighbor, path + [neighbor]))
 
     return result
+
+def linearSearch(arr, targetVal):
+    for i in range(len(arr)):
+        if arr[i] == targetVal:
+            return i
+    return -1
