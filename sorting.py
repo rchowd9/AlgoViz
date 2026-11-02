@@ -38,7 +38,3 @@ def counting_sort(arr):
    # Copy sorted elements back to original array
    for i in range(size):
        arr[i] = output[i]
-# Example usage
-data = [4, 2, 2, 8, 3, 3, 1]
-counting_sort(data)
-print("Sorted Array:", data)
