@@ -154,3 +154,16 @@ def bucket_sort(arr):
    for bucket in buckets:
        sorted_arr.extend(bucket)
    return sorted_arr
+
+def insertion_sort(arr):
+   for i in range(1, len(arr)):
+       key = arr[i] # Current element to insert
+       j = i - 1
+       # Shift elements greater than key to one position ahead
+       while j >= 0 and key < arr[j]:
+           arr[j + 1] = arr[j]
+           j -= 1
+       arr[j + 1] = key # Place key at correct position
+data = [12, 11, 13, 5, -1]
+insertion_sort(data)
+print(data) # Output: [-1, 5, 11, 12, 13]
