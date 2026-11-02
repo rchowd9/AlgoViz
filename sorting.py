@@ -16,3 +16,29 @@ def selectionSort(array, size):
             if array[j] < array[min_index]:
                 min_index = j
         array[ind], array[min_index] = array[min_index], array[ind]
+
+
+def counting_sort(arr):
+   # Find the maximum value in the array
+   max_val = max(arr)
+   size = len(arr)
+   # Initialize count and output arrays
+   count = [0] * (max_val + 1)
+   output = [0] * size
+   # Count occurrences of each element
+   for num in arr:
+       count[num] += 1
+   # Compute cumulative counts
+   for i in range(1, len(count)):
+       count[i] += count[i - 1]
+   # Build the output array
+   for i in range(size - 1, -1, -1):
+       output[count[arr[i]] - 1] = arr[i]
+       count[arr[i]] -= 1
+   # Copy sorted elements back to original array
+   for i in range(size):
+       arr[i] = output[i]
+# Example usage
+data = [4, 2, 2, 8, 3, 3, 1]
+counting_sort(data)
+print("Sorted Array:", data)
