@@ -355,9 +355,11 @@ def kNearestNeighbors(data, query_point, k):
     - A list of the k nearest neighbors' labels.
     """
     from collections import Counter
-    import math
+    import math 
 
-    def euclidean_distance(point1, point2):
+    
+
+    def euclidean_distance(point1, point2): 
         return math.sqrt(sum((x - y) ** 2 for x, y in zip(point1, point2)))
 
     # Calculate distances from the query point to all points in the dataset
