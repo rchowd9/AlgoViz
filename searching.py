@@ -304,3 +304,4 @@ def fibonacciSearch(arr, targetVal):
         return offset + 1
 
     return -1
+
