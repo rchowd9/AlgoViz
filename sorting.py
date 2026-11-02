@@ -121,3 +121,20 @@ def heap_sort(arr):
        arr[i], arr[0] = arr[0], arr[i] # Swap
        heapify(arr, i, 0)
 
+
+def pigeonhole_sort(arr):
+   min_val = min(arr)
+   max_val = max(arr)
+   size = max_val - min_val + 1
+   # Create pigeonholes
+   holes = [[] for _ in range(size)]
+   # Place elements into pigeonholes
+   for num in arr:
+       holes[num - min_val].append(num)
+   # Collect elements back into array
+   index = 0
+   for hole in holes:
+       for num in hole:
+           arr[index] = num
+           index += 1
+   return arr
