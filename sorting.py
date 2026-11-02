@@ -138,3 +138,23 @@ def pigeonhole_sort(arr):
            arr[index] = num
            index += 1
    return arr
+
+def bucket_sort(arr):
+   n = len(arr)
+   buckets = [[] for _ in range(n)]
+   # Scatter: distribute elements into buckets
+   for num in arr:
+       index = int(n * num)
+       buckets[index].append(num)
+   # Sort each bucket
+   for i in range(n):
+       buckets[i].sort()
+   # Gather: concatenate buckets
+   sorted_arr = []
+   for bucket in buckets:
+       sorted_arr.extend(bucket)
+   return sorted_arr
+# Example usage
+data = [0.78, 0.17, 0.39, 0.26, 0.72, 0.94, 0.21, 0.12, 0.23, 0.69]
+print(bucket_sort(data))
+# Output: [0.12, 0.17, 0.21, 0.23, 0.26, 0.39, 0.69, 0.72, 0.78, 0.94]
