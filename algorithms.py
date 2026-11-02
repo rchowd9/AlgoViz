@@ -398,3 +398,39 @@ def euclideanAlgorithm(data, query_point):
     
     return nearest_neighbor[1]
 
+def binaryGCDAlgorithm (a, b):
+    """
+    Implements the binary GCD algorithm (Stein's algorithm) to compute the greatest common divisor of two integers.
+
+    Parameters:
+    - a: First integer.
+    - b: Second integer.
+
+    Returns:
+    - The greatest common divisor of a and b.
+    """
+    if a == 0:
+        return b
+    if b == 0:
+        return a
+
+    # Find the greatest power of 2 that divides both a and b
+    shift = 0
+    while ((a | b) & 1) == 0:
+        a >>= 1
+        b >>= 1
+        shift += 1
+
+    while (a & 1) == 0:
+        a >>= 1
+
+    while b != 0:
+        while (b & 1) == 0:
+            b >>= 1
+
+        if a > b:
+            a, b = b, a
+
+        b -= a
+
+    return a << shift
