@@ -45,6 +45,6 @@ def radixSort(arr):
 
 # Apply counting sort for each digit place
     while max_element // place > 0:
-        countingSort(arr, place)
+        counting_sort(arr, place)
         place *= 10
 
