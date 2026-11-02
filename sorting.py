@@ -87,3 +87,21 @@ sorted_array = merge_sort(array)
 print("Original Array:", array)
 print("Sorted Array:", sorted_array)
 
+def shell_sort(arr):
+   n = len(arr)
+   gap = n // 2 # Initial gap size
+   while gap > 0:
+       for i in range(gap, n):
+           temp = arr[i]
+           j = i
+           # Perform a gapped insertion sort
+           while j >= gap and arr[j - gap] > temp:
+               arr[j] = arr[j - gap]
+               j -= gap
+           arr[j] = temp
+       gap //= 2 # Reduce the gap
+# Usage
+data = [36, 34, 43, 11, 15, 20, 28, 45]
+print("Before:", data)
+shell_sort(data)
+print("After: ", data)
