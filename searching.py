@@ -305,3 +305,39 @@ def fibonacciSearch(arr, targetVal):
 
     return -1
 
+import heapq
+
+def b_star(graph, start, goal, heuristic):
+    """
+    B* (Best-First Graph Search) algorithm.
+    graph: adjacency list {node: [(neighbor, cost), ...]}
+    heuristic: function(node) -> estimated cost to goal
+    """
+    frontier = []
+    heapq.heappush(frontier, (heuristic[start], start))
+    came_from = {start: None}
+    cost_so_far = {start: 0}
+
+    while frontier:
+        f, current = heapq.heappop(frontier)
+
+        if current == goal:
+            break
+
+        for neighbor, cost in graph.get(current, []):
+            new_cost = cost_so_far[current] + cost
+            if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
+                cost_so_far[neighbor] = new_cost
+                f_neighbor = new_cost + heuristic[neighbor]
+                heapq.heappush(frontier, (f_neighbor, neighbor))
+                came_from[neighbor] = current
+
+    # Reconstruct path
+    path = []
+    node = goal
+    while node is not None:
+        path.append(node)
+        node = came_from.get(node)
+    path.reverse()
+
+    return path, cost_so_far.get(goal, float('inf'))
