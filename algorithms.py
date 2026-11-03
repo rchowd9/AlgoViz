@@ -434,3 +434,5 @@ def binaryGCDAlgorithm (a, b):
         b -= a
 
     return a << shift
+
+def AVLtree
