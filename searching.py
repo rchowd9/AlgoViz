@@ -341,3 +341,331 @@ def b_star(graph, start, goal, heuristic):
     path.reverse()
 
     return path, cost_so_far.get(goal, float('inf'))
+
+class AVLtree:
+    """A self-balancing binary search tree (AVL), storing unique keys."""
+
+    class Node:
+        def __init__(self, key):
+            self.key = key
+            self.left = None
+            self.right = None
+            self.height = 1
+
+    def __init__(self):
+        self.root = None
+
+    @staticmethod
+    def _height(node):
+        return node.height if node else 0
+
+    def _update(self, node):
+        node.height = 1 + max(self._height(node.left), self._height(node.right))
+
+    def _rotate_right(self, root):
+        pivot = root.left
+        root.left = pivot.right
+        pivot.right = root
+        self._update(root)
+        self._update(pivot)
+        return pivot
+
+    def _rotate_left(self, root):
+        pivot = root.right
+        root.right = pivot.left
+        pivot.left = root
+        self._update(root)
+        self._update(pivot)
+        return pivot
+
+    def _balance(self, node):
+        self._update(node)
+        balance = self._height(node.left) - self._height(node.right)
+        if balance > 1:
+            if self._height(node.left.left) < self._height(node.left.right):
+                node.left = self._rotate_left(node.left)
+            return self._rotate_right(node)
+        if balance < -1:
+            if self._height(node.right.right) < self._height(node.right.left):
+                node.right = self._rotate_right(node.right)
+            return self._rotate_left(node)
+        return node
+
+    def _insert(self, node, key):
+        if node is None:
+            return self.Node(key)
+        if key < node.key:
+            node.left = self._insert(node.left, key)
+        elif key > node.key:
+            node.right = self._insert(node.right, key)
+        else:
+            return node
+        return self._balance(node)
+
+    def insert(self, key):
+        """Insert a key; duplicate keys are ignored. Returns the root node."""
+        self.root = self._insert(self.root, key)
+        return self.root
+
+    def _delete(self, node, key):
+        if node is None:
+            return None
+        if key < node.key:
+            node.left = self._delete(node.left, key)
+        elif key > node.key:
+            node.right = self._delete(node.right, key)
+        else:
+            if node.left is None:
+                return node.right
+            if node.right is None:
+                return node.left
+            successor = node.right
+            while successor.left:
+                successor = successor.left
+            node.key = successor.key
+            node.right = self._delete(node.right, successor.key)
+        return self._balance(node)
+
+    def delete(self, key):
+        """Remove a key if present; returns the root node."""
+        self.root = self._delete(self.root, key)
+        return self.root
+
+    def search(self, key):
+        node = self.root
+        while node:
+            if key == node.key:
+                return node
+            node = node.left if key < node.key else node.right
+        return None
+
+    def inorder(self):
+        """Return the keys in ascending order."""
+        result = []
+
+        def traverse(node):
+            if node:
+                traverse(node.left)
+                result.append(node.key)
+                traverse(node.right)
+
+        traverse(self.root)
+        return result
+
+    def __contains__(self, key):
+        return self.search(key) is not None
+
+
+class RedBlackTree:
+    """A red-black binary search tree, storing unique keys."""
+
+    class Node:
+        def __init__(self, key=None, color="BLACK"):
+            self.key = key
+            self.color = color
+            self.left = self.right = self.parent = None
+
+    def __init__(self):
+        self.NIL = self.Node()
+        self.root = self.NIL
+
+    def _left_rotate(self, node):
+        pivot = node.right
+        node.right = pivot.left
+        if pivot.left is not self.NIL:
+            pivot.left.parent = node
+        pivot.parent = node.parent
+        if node.parent is self.NIL:
+            self.root = pivot
+        elif node is node.parent.left:
+            node.parent.left = pivot
+        else:
+            node.parent.right = pivot
+        pivot.left = node
+        node.parent = pivot
+
+    def _right_rotate(self, node):
+        pivot = node.left
+        node.left = pivot.right
+        if pivot.right is not self.NIL:
+            pivot.right.parent = node
+        pivot.parent = node.parent
+        if node.parent is self.NIL:
+            self.root = pivot
+        elif node is node.parent.right:
+            node.parent.right = pivot
+        else:
+            node.parent.left = pivot
+        pivot.right = node
+        node.parent = pivot
+
+    def search(self, key):
+        node = self.root
+        while node is not self.NIL:
+            if key == node.key:
+                return node
+            node = node.left if key < node.key else node.right
+        return None
+
+    def insert(self, key):
+        """Insert a key; duplicate keys are ignored. Returns its node."""
+        parent = self.NIL
+        node = self.root
+        while node is not self.NIL:
+            parent = node
+            if key == node.key:
+                return node
+            node = node.left if key < node.key else node.right
+
+        inserted = self.Node(key, "RED")
+        inserted.left = inserted.right = self.NIL
+        inserted.parent = parent
+        if parent is self.NIL:
+            self.root = inserted
+        elif key < parent.key:
+            parent.left = inserted
+        else:
+            parent.right = inserted
+        self._insert_fixup(inserted)
+        return inserted
+
+    def _insert_fixup(self, node):
+        while node.parent.color == "RED":
+            if node.parent is node.parent.parent.left:
+                uncle = node.parent.parent.right
+                if uncle.color == "RED":
+                    node.parent.color = uncle.color = "BLACK"
+                    node.parent.parent.color = "RED"
+                    node = node.parent.parent
+                else:
+                    if node is node.parent.right:
+                        node = node.parent
+                        self._left_rotate(node)
+                    node.parent.color = "BLACK"
+                    node.parent.parent.color = "RED"
+                    self._right_rotate(node.parent.parent)
+            else:
+                uncle = node.parent.parent.left
+                if uncle.color == "RED":
+                    node.parent.color = uncle.color = "BLACK"
+                    node.parent.parent.color = "RED"
+                    node = node.parent.parent
+                else:
+                    if node is node.parent.left:
+                        node = node.parent
+                        self._right_rotate(node)
+                    node.parent.color = "BLACK"
+                    node.parent.parent.color = "RED"
+                    self._left_rotate(node.parent.parent)
+        self.root.color = "BLACK"
+        self.root.parent = self.NIL
+
+    def _minimum(self, node):
+        while node.left is not self.NIL:
+            node = node.left
+        return node
+
+    def _transplant(self, old, new):
+        if old.parent is self.NIL:
+            self.root = new
+        elif old is old.parent.left:
+            old.parent.left = new
+        else:
+            old.parent.right = new
+        new.parent = old.parent
+
+    def delete(self, key):
+        """Remove a key if present; returns whether it was found."""
+        target = self.search(key)
+        if target is None:
+            return False
+        moved = target
+        original_color = moved.color
+        if target.left is self.NIL:
+            fix = target.right
+            self._transplant(target, target.right)
+        elif target.right is self.NIL:
+            fix = target.left
+            self._transplant(target, target.left)
+        else:
+            moved = self._minimum(target.right)
+            original_color = moved.color
+            fix = moved.right
+            if moved.parent is target:
+                fix.parent = moved
+            else:
+                self._transplant(moved, moved.right)
+                moved.right = target.right
+                moved.right.parent = moved
+            self._transplant(target, moved)
+            moved.left = target.left
+            moved.left.parent = moved
+            moved.color = target.color
+        if original_color == "BLACK":
+            self._delete_fixup(fix)
+        return True
+
+    def _delete_fixup(self, node):
+        while node is not self.root and node.color == "BLACK":
+            if node is node.parent.left:
+                sibling = node.parent.right
+                if sibling.color == "RED":
+                    sibling.color = "BLACK"
+                    node.parent.color = "RED"
+                    self._left_rotate(node.parent)
+                    sibling = node.parent.right
+                if sibling.left.color == "BLACK" and sibling.right.color == "BLACK":
+                    sibling.color = "RED"
+                    node = node.parent
+                else:
+                    if sibling.right.color == "BLACK":
+                        sibling.left.color = "BLACK"
+                        sibling.color = "RED"
+                        self._right_rotate(sibling)
+                        sibling = node.parent.right
+                    sibling.color = node.parent.color
+                    node.parent.color = "BLACK"
+                    sibling.right.color = "BLACK"
+                    self._left_rotate(node.parent)
+                    node = self.root
+            else:
+                sibling = node.parent.left
+                if sibling.color == "RED":
+                    sibling.color = "BLACK"
+                    node.parent.color = "RED"
+                    self._right_rotate(node.parent)
+                    sibling = node.parent.left
+                if sibling.right.color == "BLACK" and sibling.left.color == "BLACK":
+                    sibling.color = "RED"
+                    node = node.parent
+                else:
+                    if sibling.left.color == "BLACK":
+                        sibling.right.color = "BLACK"
+                        sibling.color = "RED"
+                        self._left_rotate(sibling)
+                        sibling = node.parent.left
+                    sibling.color = node.parent.color
+                    node.parent.color = "BLACK"
+                    sibling.left.color = "BLACK"
+                    self._right_rotate(node.parent)
+                    node = self.root
+        node.color = "BLACK"
+
+    def inorder(self):
+        """Return the keys in ascending order."""
+        result = []
+
+        def traverse(node):
+            if node is not self.NIL:
+                traverse(node.left)
+                result.append(node.key)
+                traverse(node.right)
+
+        traverse(self.root)
+        return result
+
+    def __contains__(self, key):
+        return self.search(key) is not None
+
+
+AVLTree = AVLtree
