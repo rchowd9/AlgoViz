@@ -590,4 +590,4 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
 
     return point
 
-def 
+def stochasticGradient
