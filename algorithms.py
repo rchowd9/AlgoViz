@@ -467,4 +467,68 @@ def huntsAlgorithm(graph, start):
 
     return distances
 
-def iterativeDichotomiser3
+def iterativeDichotomiser3(data, labels, depth=0, max_depth=None):
+    """
+    Implements the Iterative Dichotomiser 3 (ID3) algorithm for decision tree learning.
+
+    Parameters:
+    - data: A list of feature vectors (list of lists).
+    - labels: A list of labels corresponding to the feature vectors.
+    - depth: The current depth of the tree (used for recursion).
+    - max_depth: The maximum depth of the tree (optional).
+
+    Returns:
+    - A decision tree represented as a nested dictionary.
+    """
+    from collections import Counter
+    import numpy as np
+
+    # Base case: if all labels are the same, return that label
+    if len(set(labels)) == 1:
+        return labels[0]
+
+    # Base case: if no features left or max depth reached, return the most common label
+    if len(data[0]) == 0 or (max_depth is not None and depth >= max_depth):
+        return Counter(labels).most_common(1)[0][0]
+
+    # Calculate entropy of current labels
+    def entropy(labels):
+        total = len(labels)
+        counts = Counter(labels)
+        return -sum((count / total) * np.log2(count / total) for count in counts.values())
+
+    current_entropy = entropy(labels)
+
+    # Find the best feature to split on
+    best_gain = 0
+    best_feature = None
+    best_splits = None
+
+    num_features = len(data[0])
+    
+    for feature_index in range(num_features):
+        # Split data based on feature value
+        splits = {}
+        for i, row in enumerate(data):
+            feature_value = row[feature_index]
+            if feature_value not in splits:
+                splits[feature_value] = []
+            splits[feature_value].append(labels[i])
+
+        # Calculate weighted entropy after the split
+        weighted_entropy = sum((len(split) / len(labels)) * entropy(split) for split in splits.values())
+        
+        # Calculate information gain
+        gain = current_entropy - weighted_entropy
+        
+        if gain > best_gain:
+            best_gain = gain
+            best_feature = feature_index
+            best_splits = splits
+
+    # If no gain, return the most common label
+    if best_gain == 0:
+        return Counter(labels).most_common(1)[0][0]
+
+    # Create a subtree for each split
+    tree = {best_feature: {}}
