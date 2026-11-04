@@ -532,3 +532,39 @@ def iterativeDichotomiser3(data, labels, depth=0, max_depth=None):
 
     # Create a subtree for each split
     tree = {best_feature: {}}
+
+def CART(data, labels, depth=0, max_depth=None):
+    """
+    Implements the Classification and Regression Trees (CART) algorithm for decision tree learning.
+
+    Parameters:
+    - data: A list of feature vectors (list of lists).
+    - labels: A list of labels corresponding to the feature vectors.
+    - depth: The current depth of the tree (used for recursion).
+    - max_depth: The maximum depth of the tree (optional).
+
+    Returns:
+    - A decision tree represented as a nested dictionary.
+    """
+    from collections import Counter
+    import numpy as np
+
+    # Base case: if all labels are the same, return that label
+    if len(set(labels)) == 1:
+        return labels[0]
+
+    # Base case: if no features left or max depth reached, return the most common label
+    if len(data[0]) == 0 or (max_depth is not None and depth >= max_depth):
+        return Counter(labels).most_common(1)[0][0]
+
+    # Find the best feature to split on using Gini impurity
+    def gini_impurity(labels):
+        total = len(labels)
+        counts = Counter(labels)
+        return 1 - sum((count / total) ** 2 for count in counts.values())
+
+    current_gini = gini_impurity(labels)
+
+    best_gain = 0
+    best_feature = None
+    best_splits = None
