@@ -612,3 +612,4 @@ def stochasticGradientDescent(gradient_function, initial_point, learning_rate, i
         point = [p - learning_rate * g for p, g in zip(point, gradient)]
 
     return point
+
