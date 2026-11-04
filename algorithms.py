@@ -569,4 +569,23 @@ def CART(data, labels, depth=0, max_depth=None):
     best_feature = None
     best_splits = None
 
-def gradientDescent
+def gradientDescent(gradient_function, initial_point, learning_rate, iterations):
+    """
+    Implements the gradient descent optimization algorithm.
+
+    Parameters:
+    - gradient_function: A function that computes the gradient at a given point.
+    - initial_point: The starting point for the optimization.
+    - learning_rate: The step size for each iteration.
+    - iterations: The number of iterations to perform.
+
+    Returns:
+    - The optimized point after performing gradient descent.
+    """
+    point = initial_point
+
+    for _ in range(iterations):
+        gradient = gradient_function(point)
+        point = [p - learning_rate * g for p, g in zip(point, gradient)]
+
+    return point
