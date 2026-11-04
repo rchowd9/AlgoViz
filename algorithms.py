@@ -569,4 +569,3 @@ def CART(data, labels, depth=0, max_depth=None):
     best_feature = None
     best_splits = None
 
-
