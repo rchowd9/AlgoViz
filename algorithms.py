@@ -496,6 +496,77 @@ def bagging(data, labels, base_learner, n_estimators):
 
     return models
 
+class DecisionTree:
+    """A small classification tree used by the RandomForest implementation."""
+
+    def __init__(self, max_depth=None):
+        self.max_depth = max_depth
+        self.tree = None
+
+    def fit(self, X, y):
+        rows = X.tolist() if hasattr(X, "tolist") else list(X)
+        labels = y.tolist() if hasattr(y, "tolist") else list(y)
+
+        def build(indices, depth):
+            counts = {}
+            for index in indices:
+                counts[labels[index]] = counts.get(labels[index], 0) + 1
+            majority = max(counts, key=counts.get)
+            if len(counts) == 1 or (self.max_depth is not None and depth >= self.max_depth):
+                return {"value": majority}
+
+            parent_impurity = 1 - sum((count / len(indices)) ** 2 for count in counts.values())
+            best_gain, best_split = 0, None
+            for feature in range(len(rows[0])):
+                try:
+                    values = sorted({float(rows[index][feature]) for index in indices})
+                except (TypeError, ValueError):
+                    continue
+                for left_value, right_value in zip(values, values[1:]):
+                    threshold = (left_value + right_value) / 2
+                    left = [i for i in indices if float(rows[i][feature]) <= threshold]
+                    right = [i for i in indices if float(rows[i][feature]) > threshold]
+                    if not left or not right:
+                        continue
+                    impurity = 0
+                    for subset in (left, right):
+                        subset_counts = {}
+                        for index in subset:
+                            subset_counts[labels[index]] = subset_counts.get(labels[index], 0) + 1
+                        impurity += len(subset) / len(indices) * (
+                            1 - sum((count / len(subset)) ** 2 for count in subset_counts.values())
+                        )
+                    gain = parent_impurity - impurity
+                    if gain > best_gain:
+                        best_gain, best_split = gain, (feature, threshold, left, right)
+
+            if best_split is None:
+                return {"value": majority}
+            feature, threshold, left, right = best_split
+            return {
+                "feature": feature,
+                "threshold": threshold,
+                "left": build(left, depth + 1),
+                "right": build(right, depth + 1),
+            }
+
+        self.tree = build(list(range(len(rows))), 0)
+        return self
+
+    def predict(self, X):
+        import numpy as np
+
+        rows = X.tolist() if hasattr(X, "tolist") else list(X)
+
+        def classify(row):
+            node = self.tree
+            while "value" not in node:
+                node = node["left"] if float(row[node["feature"]]) <= node["threshold"] else node["right"]
+            return node["value"]
+
+        return np.asarray([classify(row) for row in rows])
+
+
 class RandomForest:
     def __init__(self, n_estimators=10, max_depth=5, bootstrap=True):
         self.n_estimators = n_estimators
@@ -504,6 +575,8 @@ class RandomForest:
         self.trees = []
 
     def _bootstrap_sample(self, X, y):
+        import numpy as np
+
         n = X.shape[0]
         indices = np.random.choice(n, size=n, replace=True)
         return X[indices], y[indices]
@@ -516,6 +589,8 @@ class RandomForest:
             self.trees.append(tree)
 
     def predict(self, X):
+        import numpy as np
+
         predictions = np.array([tree.predict(X) for tree in self.trees])
         return np.mean(predictions, axis=0)  # regression: average; classification: majority vote
 
