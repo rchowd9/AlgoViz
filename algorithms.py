@@ -469,7 +469,7 @@ def huntsAlgorithm(graph, start):
 
     return distances
 
-def bagging
+def bagging(data, labels, base_learner, n_estimators):
 
 def iterativeDichotomiser3(data, labels, depth=0, max_depth=None):
     """
