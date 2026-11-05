@@ -470,6 +470,29 @@ def huntsAlgorithm(graph, start):
     return distances
 
 def bagging(data, labels, base_learner, n_estimators):
+    """
+    Implements the bagging ensemble method.
+
+    Parameters:
+    - data: A list of feature vectors (list of lists).
+    - labels: A list of labels corresponding to the feature vectors.
+    - base_learner: A function that takes data and labels and returns a trained model.
+    - n_estimators: The number of base learners to train.
+
+    Returns:
+    - A list of trained base learners.
+    """
+    from sklearn.utils import resample
+
+    models = []
+    for _ in range(n_estimators):
+        # Create a bootstrap sample
+        bootstrapped_data, bootstrapped_labels = resample(data, labels)
+        # Train the base learner on the bootstrap sample
+        model = base_learner(bootstrapped_data, bootstrapped_labels)
+        models.append(model)
+
+    return models
 
 def iterativeDichotomiser3(data, labels, depth=0, max_depth=None):
     """
