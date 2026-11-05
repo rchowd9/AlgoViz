@@ -380,9 +380,10 @@ def sorting_trace(values, algorithm):
             "Pigeonhole sort": pigeonhole_sort,
             "Bucket sort": bucket_sort,
         }
-        sorted_items = sort_functions[algorithm](items.copy())
+        sort_input = items.copy()
+        sorted_items = sort_functions[algorithm](sort_input)
         if sorted_items is None:
-            sorted_items = items
+            sorted_items = sort_input
         items[:] = sorted_items
         record(f"Complete {algorithm.lower()}")
 
