@@ -496,7 +496,28 @@ def bagging(data, labels, base_learner, n_estimators):
 
     return models
 
-def randomForest
+class RandomForest:
+    def __init__(self, n_estimators=10, max_depth=5, bootstrap=True):
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.bootstrap = bootstrap
+        self.trees = []
+
+    def _bootstrap_sample(self, X, y):
+        n = X.shape[0]
+        indices = np.random.choice(n, size=n, replace=True)
+        return X[indices], y[indices]
+
+    def fit(self, X, y):
+        for _ in range(self.n_estimators):
+            X_boot, y_boot = self._bootstrap_sample(X, y)
+            tree = DecisionTree(max_depth=self.max_depth)
+            tree.fit(X_boot, y_boot)
+            self.trees.append(tree)
+
+    def predict(self, X):
+        predictions = np.array([tree.predict(X) for tree in self.trees])
+        return np.mean(predictions, axis=0)  # regression: average; classification: majority vote
 
 def iterativeDichotomiser3(data, labels, depth=0, max_depth=None):
     """
