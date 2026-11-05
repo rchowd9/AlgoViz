@@ -496,6 +496,8 @@ def bagging(data, labels, base_learner, n_estimators):
 
     return models
 
+def randomForest
+
 def iterativeDichotomiser3(data, labels, depth=0, max_depth=None):
     """
     Implements the Iterative Dichotomiser 3 (ID3) algorithm for decision tree learning.
