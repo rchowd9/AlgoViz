@@ -19,34 +19,49 @@ def selectionSort(array, size):
 
 
 def counting_sort(arr):
-   # Find the maximum value in the array
+   if not arr:
+       return arr
+
+   min_val = min(arr)
    max_val = max(arr)
-   size = len(arr)
-   # Initialize count and output arrays
-   count = [0] * (max_val + 1)
-   output = [0] * size
-   # Count occurrences of each element
+   count = [0] * (max_val - min_val + 1)
    for num in arr:
-       count[num] += 1
-   # Compute cumulative counts
-   for i in range(1, len(count)):
-       count[i] += count[i - 1]
-   # Build the output array
-   for i in range(size - 1, -1, -1):
-       output[count[arr[i]] - 1] = arr[i]
-       count[arr[i]] -= 1
-   # Copy sorted elements back to original array
-   for i in range(size):
-       arr[i] = output[i]
+       count[num - min_val] += 1
+
+   index = 0
+   for offset, occurrences in enumerate(count):
+       for _ in range(occurrences):
+           arr[index] = offset + min_val
+           index += 1
+   return arr
 
 def radixSort(arr):
-    max_element = max(arr) # Find the largest number
-    place = 1
+    if not arr:
+        return arr
 
-# Apply counting sort for each digit place
-    while max_element // place > 0:
-        counting_sort(arr, place)
-        place *= 10
+    def sort_non_negative(values):
+        place = 1
+        max_element = max(values, default=0)
+        while max_element // place > 0:
+            output = [0] * len(values)
+            counts = [0] * 10
+            for value in values:
+                counts[(value // place) % 10] += 1
+            for index in range(1, 10):
+                counts[index] += counts[index - 1]
+            for value in reversed(values):
+                digit = (value // place) % 10
+                counts[digit] -= 1
+                output[counts[digit]] = value
+            values[:] = output
+            place *= 10
+
+    negatives = [-value for value in arr if value < 0]
+    positives = [value for value in arr if value >= 0]
+    sort_non_negative(negatives)
+    sort_non_negative(positives)
+    arr[:] = [-value for value in reversed(negatives)] + positives
+    return arr
 
 def merge_sort(arr):
    # Base case: A list with 1 or no elements is already sorted
@@ -123,6 +138,9 @@ def heap_sort(arr):
 
 
 def pigeonhole_sort(arr):
+   if not arr:
+       return arr
+
    min_val = min(arr)
    max_val = max(arr)
    size = max_val - min_val + 1
@@ -140,11 +158,19 @@ def pigeonhole_sort(arr):
    return arr
 
 def bucket_sort(arr):
+   if not arr:
+      return []
+
    n = len(arr)
+   min_val = min(arr)
+   max_val = max(arr)
+   if min_val == max_val:
+      return list(arr)
+
    buckets = [[] for _ in range(n)]
    # Scatter: distribute elements into buckets
    for num in arr:
-       index = int(n * num)
+       index = min(n - 1, int(n * (num - min_val) / (max_val - min_val)))
        buckets[index].append(num)
    # Sort each bucket
    for i in range(n):

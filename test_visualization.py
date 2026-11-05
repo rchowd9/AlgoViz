@@ -1,7 +1,14 @@
 import unittest
 
 from api import app as flask_app
-from visualization import parse_graph, search_graph, sorting_trace, hill_climb_trace
+from visualization import (
+    ARRAY_SEARCH_ALGORITHMS,
+    parse_graph,
+    search_array,
+    search_graph,
+    sorting_trace,
+    hill_climb_trace,
+)
 
 
 GRAPH = {
@@ -79,10 +86,31 @@ class GraphSearchTests(unittest.TestCase):
 
 class AlgorithmTraceTests(unittest.TestCase):
     def test_sorting_traces_end_with_sorted_values(self):
-        for algorithm in ("Bubble sort", "Insertion sort", "Selection sort", "Merge sort"):
+        for algorithm in (
+            "Bubble sort",
+            "Insertion sort",
+            "Selection sort",
+            "Merge sort",
+            "Shell sort",
+            "Heap sort",
+            "Counting sort",
+            "Radix sort",
+            "Pigeonhole sort",
+            "Bucket sort",
+        ):
             with self.subTest(algorithm=algorithm):
-                steps = sorting_trace([5, 1, 4, 2], algorithm)
-                self.assertEqual(steps[-1]["values"], [1, 2, 4, 5])
+                steps = sorting_trace([5, -1, 4, 2], algorithm)
+                self.assertEqual(steps[-1]["values"], [-1, 2, 4, 5])
+
+    def test_array_searches_find_values(self):
+        for algorithm in ARRAY_SEARCH_ALGORITHMS:
+            with self.subTest(algorithm=algorithm):
+                values = [1, 2, 3, 4, 5] if algorithm != "Linear search" else [5, 2, 4, 1, 3]
+                self.assertEqual(search_array(values, 4, algorithm), values.index(4))
+
+    def test_sorted_array_search_rejects_unsorted_values(self):
+        with self.assertRaisesRegex(ValueError, "requires the input sequence to be sorted"):
+            search_array([3, 1, 2], 2, "Binary search")
 
     def test_hill_climbing_reaches_peak(self):
         self.assertEqual(hill_climb_trace(-8)[-1], 3)

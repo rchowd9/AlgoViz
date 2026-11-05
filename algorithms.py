@@ -409,6 +409,8 @@ def binaryGCDAlgorithm (a, b):
     Returns:
     - The greatest common divisor of a and b.
     """
+    a = abs(a)
+    b = abs(b)
     if a == 0:
         return b
     if b == 0:

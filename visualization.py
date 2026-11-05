@@ -3,6 +3,9 @@ import json
 import math
 from itertools import count
 
+from searching import binarySearch, fibonacciSearch, linearSearch, ternarySearch
+from sorting import bucket_sort, counting_sort, heap_sort, pigeonhole_sort, radixSort, shell_sort
+
 
 SEARCH_ALGORITHMS = (
     "Breadth-first search",
@@ -14,6 +17,12 @@ SEARCH_ALGORITHMS = (
     "Iterative deepening search",
     "Iterative deepening A* search",
     "Bidirectional search",
+)
+ARRAY_SEARCH_ALGORITHMS = (
+    "Linear search",
+    "Binary search",
+    "Ternary search",
+    "Fibonacci search",
 )
 
 
@@ -97,6 +106,23 @@ def search_graph(graph, start, goal, algorithm, heuristic=None, max_depth=20):
     }:
         return _priority_search(graph, start, goal, algorithm, heuristic)
     return _uninformed_search(graph, start, goal, algorithm)
+
+
+def search_array(values, target, algorithm):
+    if algorithm not in ARRAY_SEARCH_ALGORITHMS:
+        raise ValueError(f"Unknown array search algorithm: {algorithm}.")
+    if not values:
+        raise ValueError("Enter at least one number to search.")
+    if algorithm != "Linear search" and values != sorted(values):
+        raise ValueError(f"{algorithm} requires the input sequence to be sorted.")
+
+    search_functions = {
+        "Linear search": linearSearch,
+        "Binary search": binarySearch,
+        "Ternary search": ternarySearch,
+        "Fibonacci search": fibonacciSearch,
+    }
+    return search_functions[algorithm](values, target)
 
 
 def _uninformed_search(graph, start, goal, algorithm):
@@ -286,7 +312,19 @@ def _reconstruct_path(parent, goal):
 
 
 def sorting_trace(values, algorithm):
-    if algorithm not in {"Bubble sort", "Insertion sort", "Selection sort", "Merge sort"}:
+    supported_algorithms = {
+        "Bubble sort",
+        "Insertion sort",
+        "Selection sort",
+        "Merge sort",
+        "Shell sort",
+        "Heap sort",
+        "Counting sort",
+        "Radix sort",
+        "Pigeonhole sort",
+        "Bucket sort",
+    }
+    if algorithm not in supported_algorithms:
         raise ValueError(f"Unknown sorting algorithm: {algorithm}.")
     if not values:
         raise ValueError("Enter at least one number to sort.")
@@ -321,7 +359,7 @@ def sorting_trace(values, algorithm):
             smallest = min(range(index, len(items)), key=items.__getitem__)
             items[index], items[smallest] = items[smallest], items[index]
             record(f"Place the minimum value at position {index}")
-    else:
+    elif algorithm == "Merge sort":
         def merge_sort(left, right):
             if right - left < 2:
                 return
@@ -333,6 +371,20 @@ def sorting_trace(values, algorithm):
             record(f"Merge positions {left} through {right - 1}")
 
         merge_sort(0, len(items))
+    else:
+        sort_functions = {
+            "Shell sort": shell_sort,
+            "Heap sort": heap_sort,
+            "Counting sort": counting_sort,
+            "Radix sort": radixSort,
+            "Pigeonhole sort": pigeonhole_sort,
+            "Bucket sort": bucket_sort,
+        }
+        sorted_items = sort_functions[algorithm](items.copy())
+        if sorted_items is None:
+            sorted_items = items
+        items[:] = sorted_items
+        record(f"Complete {algorithm.lower()}")
 
     return steps
 

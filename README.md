@@ -7,8 +7,12 @@ strategies. The Streamlit UI includes:
   A*, depth-limited, iterative deepening, iterative deepening A*, and
   bidirectional search. Edit a weighted graph as JSON, choose start and goal
   nodes, and inspect the expansion order, route, and graph visualization.
-- **Sorting:** compare bubble, insertion, selection, and merge sort one step at
-  a time using a sequence of up to 50 numbers.
+- **Array search:** linear, binary, ternary, and Fibonacci search. Ordered
+  searches validate that the input is ascending.
+- **Sorting:** bubble, insertion, selection, merge, shell, heap, counting,
+  radix, pigeonhole, and bucket sort using a sequence of up to 50 integers.
+- **Numeric algorithms:** run binary GCD and gradient descent on an editable
+  starting value.
 - **Hill climbing:** follow a local optimization search on a one-dimensional
   objective.
 - **TensorFlow:** train a small neural network on synthetic regression data and

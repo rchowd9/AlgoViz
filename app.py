@@ -2,10 +2,13 @@ import json
 
 import streamlit as st
 
+from algorithms import binaryGCDAlgorithm, gradientDescent
 from visualization import (
+    ARRAY_SEARCH_ALGORITHMS,
     SEARCH_ALGORITHMS,
     hill_climb_trace,
     parse_graph,
+    search_array,
     search_graph,
     sorting_trace,
 )
@@ -21,7 +24,18 @@ DEFAULT_GRAPH = {
     "G": {"D": 2, "E": 4, "F": 1},
 }
 DEFAULT_HEURISTIC = {"A": 6, "B": 4, "C": 3, "D": 2, "E": 3, "F": 1, "G": 0}
-SORTING_ALGORITHMS = ("Bubble sort", "Insertion sort", "Selection sort", "Merge sort")
+SORTING_ALGORITHMS = (
+    "Bubble sort",
+    "Insertion sort",
+    "Selection sort",
+    "Merge sort",
+    "Shell sort",
+    "Heap sort",
+    "Counting sort",
+    "Radix sort",
+    "Pigeonhole sort",
+    "Bucket sort",
+)
 
 
 def graphviz_source(graph, start, goal, order, path):
@@ -57,8 +71,8 @@ st.set_page_config(page_title="Algorithm Explorer", page_icon="🔎", layout="wi
 st.title("Algorithm Explorer")
 st.caption("Explore graph search, sorting, local optimization, and a TensorFlow neural network.")
 
-search_tab, sorting_tab, optimization_tab, tensorflow_tab = st.tabs(
-    ["Graph search", "Sorting", "Hill climbing", "TensorFlow"]
+search_tab, array_search_tab, sorting_tab, algorithms_tab, optimization_tab, tensorflow_tab = st.tabs(
+    ["Graph search", "Array search", "Sorting", "Numeric algorithms", "Hill climbing", "TensorFlow"]
 )
 
 with search_tab:
@@ -147,6 +161,48 @@ with search_tab:
     else:
         st.info("Choose a search method and run it to see the traversal and route.")
 
+with array_search_tab:
+    st.subheader("Find a value in a sequence")
+    with st.form("array-search-controls"):
+        first, second, third = st.columns(3)
+        array_search_algorithm = first.selectbox("Search method", ARRAY_SEARCH_ALGORITHMS)
+        array_text = second.text_input("Numbers (comma-separated)", "8, 3, 5, 1, 9, 2")
+        target_text = third.text_input("Target", "5")
+        submitted_array_search = st.form_submit_button("Search", type="primary")
+
+    if submitted_array_search:
+        try:
+            values = [int(value.strip()) for value in array_text.split(",") if value.strip()]
+            target = int(target_text.strip())
+            index = search_array(values, target, array_search_algorithm)
+            st.session_state["array_search_result"] = {
+                "values": values,
+                "target": target,
+                "index": index,
+                "algorithm": array_search_algorithm,
+            }
+        except ValueError as error:
+            st.error(f"Could not run search: {error}")
+
+    array_result = st.session_state.get("array_search_result")
+    if array_result:
+        if array_result["index"] >= 0:
+            st.success(f"Found {array_result['target']} at index {array_result['index']}.")
+        else:
+            st.info(f"{array_result['target']} was not found.")
+        st.dataframe(
+            [
+                {"Index": index, "Value": value, "Match": value == array_result["target"]}
+                for index, value in enumerate(array_result["values"])
+            ],
+            hide_index=True,
+            use_container_width=True,
+        )
+        if array_result["algorithm"] != "Linear search":
+            st.caption("Binary, ternary, and Fibonacci search require ascending input.")
+    else:
+        st.info("Choose a search method, enter a sequence and target, then run the search.")
+
 with sorting_tab:
     st.subheader("Watch a sorting algorithm transform a sequence")
     with st.form("sorting-controls"):
@@ -172,6 +228,33 @@ with sorting_tab:
         st.write("**Sorted result:**", steps[-1]["values"])
     else:
         st.info("Enter a sequence and create a trace to inspect each sorting step.")
+
+with algorithms_tab:
+    st.subheader("Numeric algorithm demos")
+    gcd_tab, gradient_tab = st.tabs(["Binary GCD", "Gradient descent"])
+    with gcd_tab:
+        st.write("Compute the greatest common divisor using Stein's binary GCD algorithm.")
+        first, second = st.columns(2)
+        gcd_a = first.number_input("First integer", value=48, step=1, key="gcd_a")
+        gcd_b = second.number_input("Second integer", value=18, step=1, key="gcd_b")
+        if st.button("Calculate GCD", type="primary"):
+            result = binaryGCDAlgorithm(int(gcd_a), int(gcd_b))
+            st.metric("Greatest common divisor", result)
+
+    with gradient_tab:
+        st.write("Minimize `f(x) = (x - 3)²` with gradient `2(x - 3)`.")
+        initial_point = st.number_input("Starting point", value=-8.0, key="gradient_start")
+        learning_rate = st.slider("Learning rate", 0.01, 0.5, 0.1, key="gradient_rate")
+        iterations = st.slider("Iterations", 1, 100, 25, key="gradient_iterations")
+        if st.button("Run gradient descent", type="primary"):
+            point = gradientDescent(
+                lambda coordinates: [2 * (coordinates[0] - 3)],
+                [initial_point],
+                learning_rate,
+                iterations,
+            )[0]
+            st.metric("Final position", f"{point:.6f}")
+            st.metric("Objective value", f"{(point - 3) ** 2:.6f}")
 
 with optimization_tab:
     st.subheader("Hill climbing on a simple objective")
