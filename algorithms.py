@@ -482,12 +482,14 @@ def bagging(data, labels, base_learner, n_estimators):
     Returns:
     - A list of trained base learners.
     """
-    from sklearn.utils import resample
+    from random import choices
 
     models = []
     for _ in range(n_estimators):
         # Create a bootstrap sample
-        bootstrapped_data, bootstrapped_labels = resample(data, labels)
+        indices = choices(range(len(data)), k=len(data))
+        bootstrapped_data = [data[i] for i in indices]
+        bootstrapped_labels = [labels[i] for i in indices]
         # Train the base learner on the bootstrap sample
         model = base_learner(bootstrapped_data, bootstrapped_labels)
         models.append(model)
