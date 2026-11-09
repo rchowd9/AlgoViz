@@ -64,7 +64,7 @@ def geneticAlgorithm(population, fitness_function, generations, mutation_rate):
     best_individual = max(population, key=fitness_function)
     return best_individual
 
-def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function):
+def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function, trace=None):
     """
     Implements the minimax algorithm for decision making in two-player games.
 
@@ -77,25 +77,40 @@ def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function):
     Returns:
     - The best score for the current player at the given state.
     """
-    if depth == 0:
-        return evaluate_function(state)
+    def search(current_state, remaining_depth, maximizing, node_path):
+        children = current_state.get_children() if remaining_depth != 0 else []
+        if remaining_depth == 0 or not children:
+            score = evaluate_function(current_state)
+            if trace is not None:
+                trace.append(
+                    {
+                        "node_path": node_path,
+                        "depth": len(node_path),
+                        "player": "Max" if maximizing else "Min",
+                        "event": "Leaf evaluation",
+                        "score": score,
+                    }
+                )
+            return score
 
-    children = state.get_children()
-    if not children:
-        return evaluate_function(state)
+        child_scores = [
+            search(child, remaining_depth - 1, not maximizing, node_path + (index,))
+            for index, child in enumerate(children)
+        ]
+        score = max(child_scores) if maximizing else min(child_scores)
+        if trace is not None:
+            trace.append(
+                {
+                    "node_path": node_path,
+                    "depth": len(node_path),
+                    "player": "Max" if maximizing else "Min",
+                    "event": "Select maximum" if maximizing else "Select minimum",
+                    "score": score,
+                }
+            )
+        return score
 
-    if maximizing_player:
-        max_eval = float('-inf')
-        for child in children:
-            eval = miniMaxAlgorithm(child, depth - 1, False, evaluate_function)
-            max_eval = max(max_eval, eval)
-        return max_eval
-    else:
-        min_eval = float('inf')
-        for child in children:
-            eval = miniMaxAlgorithm(child, depth - 1, True, evaluate_function)
-            min_eval = min(min_eval, eval)
-        return min_eval
+    return search(state, depth, maximizing_player, ())
 
 
 def alphaBetaPruning(state, depth, alpha, beta, maximizing_player, evaluate_function):
@@ -170,7 +185,7 @@ def hillClimbing(state, evaluate_function):
 
     return current_state
 
-def simulatedAnnealing(state, evaluate_function, initial_temperature, cooling_rate):
+def simulatedAnnealing(state, evaluate_function, initial_temperature, cooling_rate, trace=None):
     """
     Implements the simulated annealing algorithm for optimization problems.
 
@@ -186,12 +201,27 @@ def simulatedAnnealing(state, evaluate_function, initial_temperature, cooling_ra
     current_state = state
     current_score = evaluate_function(current_state)
     temperature = initial_temperature
+    if trace is not None:
+        trace.append(
+            {
+                "temperature": temperature,
+                "current_state": current_state,
+                "current_score": current_score,
+                "candidate_state": None,
+                "candidate_score": None,
+                "accepted": None,
+                "result_state": current_state,
+                "result_score": current_score,
+            }
+        )
 
     while temperature > 1:
         neighbors = current_state.get_neighbors()
         if not neighbors:
             break
 
+        previous_state = current_state
+        previous_score = current_score
         next_state = random.choice(neighbors)
         next_score = evaluate_function(next_state)
 
@@ -202,9 +232,24 @@ def simulatedAnnealing(state, evaluate_function, initial_temperature, cooling_ra
             acceptance_probability = math.exp((next_score - current_score) / temperature)
 
         # Decide whether to accept the new state
-        if random.random() < acceptance_probability:
+        accepted = random.random() < acceptance_probability
+        if accepted:
             current_state = next_state
             current_score = next_score
+
+        if trace is not None:
+            trace.append(
+                {
+                    "temperature": temperature,
+                    "current_state": previous_state,
+                    "current_score": previous_score,
+                    "candidate_state": next_state,
+                    "candidate_score": next_score,
+                    "accepted": accepted,
+                    "result_state": current_state,
+                    "result_score": current_score,
+                }
+            )
 
         # Cool down the temperature
         temperature *= cooling_rate
@@ -342,7 +387,7 @@ def beliefStateUpdate(prior_belief, observation, transition_model, observation_m
 
     return new_belief
 
-def kNearestNeighbors(data, query_point, k):
+def kNearestNeighbors(data, query_point, k, trace=None):
     """
     Implements the k-Nearest Neighbors algorithm.
 
@@ -363,14 +408,28 @@ def kNearestNeighbors(data, query_point, k):
         return math.sqrt(sum((x - y) ** 2 for x, y in zip(point1, point2)))
 
     # Calculate distances from the query point to all points in the dataset
-    distances = [(euclidean_distance(point, query_point), label) for point, label in data]
+    distances = [
+        (euclidean_distance(point, query_point), index, point, label)
+        for index, (point, label) in enumerate(data)
+    ]
     
     # Sort by distance and select the k nearest neighbors
     distances.sort(key=lambda x: x[0])
     k_nearest_neighbors = distances[:k]
 
+    if trace is not None:
+        trace.extend(
+            {
+                "rank": rank,
+                "point": point,
+                "label": label,
+                "distance": distance,
+            }
+            for rank, (distance, _, point, label) in enumerate(distances, start=1)
+        )
+
     # Extract the labels of the k nearest neighbors
-    labels = [label for _, label in k_nearest_neighbors]
+    labels = [label for _, _, _, label in k_nearest_neighbors]
 
     # Return the most common label among the k nearest neighbors
     most_common_label = Counter(labels).most_common(1)[0][0]
