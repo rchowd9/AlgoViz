@@ -344,15 +344,18 @@ with more_algorithms_tab:
         cooling_rate = second.slider("Cooling rate", 0.80, 0.99, 0.90, key="annealing_cooling")
         if st.button("Run simulated annealing", type="primary"):
             objective = lambda state: -(state.value - 3) ** 2 + 9
+            annealing_trace = []
             final_state = simulatedAnnealing(
                 _IntegerState(annealing_start),
                 objective,
                 temperature,
                 cooling_rate,
+                trace=annealing_trace,
             )
             st.session_state["annealing_result"] = {
                 "position": final_state.value,
                 "score": objective(final_state),
+                "trace": annealing_trace,
             }
         annealing_result = st.session_state.get("annealing_result")
         if annealing_result:
@@ -360,6 +363,60 @@ with more_algorithms_tab:
             first.metric("Final accepted position", annealing_result["position"])
             second.metric("Objective score", annealing_result["score"])
             st.caption("The final state may differ between runs because moves are sampled randomly.")
+            trace = annealing_result["trace"]
+            step_number = st.slider(
+                "Annealing step",
+                0,
+                len(trace) - 1,
+                len(trace) - 1,
+                key="annealing_trace_step",
+            )
+            step = trace[step_number]
+            if step["candidate_state"] is None:
+                st.caption(
+                    f"Step 1 of {len(trace)} — starting at x = {step['result_state'].value} "
+                    f"with score {step['result_score']}."
+                )
+            else:
+                decision = "accepted" if step["accepted"] else "rejected"
+                st.caption(
+                    f"Step {step_number + 1} of {len(trace)} — proposed "
+                    f"x = {step['candidate_state'].value} (score {step['candidate_score']}) "
+                    f"at temperature {step['temperature']:.2f}; {decision}."
+                )
+            visible_steps = trace[:step_number + 1]
+            st.dataframe(
+                [
+                    {
+                        "Step": index + 1,
+                        "Temperature": item["temperature"],
+                        "Current x": item["current_state"].value,
+                        "Proposed x": (
+                            item["candidate_state"].value
+                            if item["candidate_state"] is not None
+                            else None
+                        ),
+                        "Proposed score": item["candidate_score"],
+                        "Decision": (
+                            "Start"
+                            if item["accepted"] is None
+                            else "Accepted" if item["accepted"] else "Rejected"
+                        ),
+                        "Resulting x": item["result_state"].value,
+                        "Resulting score": item["result_score"],
+                    }
+                    for index, item in enumerate(visible_steps)
+                ],
+                hide_index=True,
+                use_container_width=True,
+            )
+            st.line_chart(
+                {
+                    "Position": [item["result_state"].value for item in visible_steps],
+                    "Objective score": [item["result_score"] for item in visible_steps],
+                },
+                height=240,
+            )
 
     with game_search_tab:
         st.write("Set eight terminal scores for a three-ply binary game tree.")
@@ -387,7 +444,8 @@ with more_algorithms_tab:
                 return state.score
 
             tree = build_tree(leaf_scores)
-            minimax_score = miniMaxAlgorithm(tree, 3, True, evaluate)
+            minimax_trace = []
+            minimax_score = miniMaxAlgorithm(tree, 3, True, evaluate, trace=minimax_trace)
             pruned_score = alphaBetaPruning(
                 tree,
                 3,
@@ -397,12 +455,50 @@ with more_algorithms_tab:
                 evaluate,
             )
             st.session_state["game_search_result"] = (minimax_score, pruned_score)
+            st.session_state["minimax_trace"] = minimax_trace
         game_search_result = st.session_state.get("game_search_result")
         if game_search_result:
             first, second = st.columns(2)
             first.metric("Minimax score", game_search_result[0])
             second.metric("Alpha-beta score", game_search_result[1])
             st.caption("Both methods return the same optimal score; alpha-beta can skip branches.")
+            trace = st.session_state["minimax_trace"]
+            step_number = st.slider(
+                "Minimax step",
+                0,
+                len(trace) - 1,
+                len(trace) - 1,
+                key="minimax_trace_step",
+            )
+            step = trace[step_number]
+
+            def format_node_path(node_path):
+                if not node_path:
+                    return "Root"
+                return "Root → " + " → ".join(
+                    "Left" if child_index == 0 else "Right"
+                    for child_index in node_path
+                )
+
+            st.caption(
+                f"Step {step_number + 1} of {len(trace)} — {step['event']} at "
+                f"{format_node_path(step['node_path'])}: score {step['score']}."
+            )
+            st.dataframe(
+                [
+                    {
+                        "Step": index + 1,
+                        "Node": format_node_path(item["node_path"]),
+                        "Depth": item["depth"],
+                        "Turn": item["player"],
+                        "Action": item["event"],
+                        "Score": item["score"],
+                    }
+                    for index, item in enumerate(trace[:step_number + 1])
+                ],
+                hide_index=True,
+                use_container_width=True,
+            )
 
     with knn_tab:
         st.write("Classify a two-dimensional point using k-nearest neighbors.")
@@ -442,10 +538,18 @@ with more_algorithms_tab:
                 if neighbor_count > len(training_data):
                     raise ValueError("k cannot exceed the number of training rows.")
                 query_point = [query_x, query_y]
+                neighbor_trace = []
                 st.session_state["knn_result"] = {
-                    "knn": kNearestNeighbors(training_data, query_point, int(neighbor_count)),
+                    "knn": kNearestNeighbors(
+                        training_data,
+                        query_point,
+                        int(neighbor_count),
+                        trace=neighbor_trace,
+                    ),
                     "nearest": euclideanAlgorithm(training_data, query_point),
                     "query": query_point,
+                    "k": int(neighbor_count),
+                    "trace": neighbor_trace,
                 }
             except ValueError as error:
                 st.error(f"Could not classify point: {error}")
@@ -456,6 +560,36 @@ with more_algorithms_tab:
             first.metric("k-NN class", knn_result["knn"])
             second.metric("Nearest-neighbor class", knn_result["nearest"])
             st.caption(f"Query point: ({knn_result['query'][0]}, {knn_result['query'][1]})")
+            trace = knn_result["trace"]
+            step_number = st.slider(
+                "Neighbor step",
+                1,
+                len(trace),
+                len(trace),
+                key="knn_trace_step",
+            )
+            step = trace[step_number - 1]
+            st.caption(
+                f"Step {step_number} of {len(trace)} — rank {step['rank']} point "
+                f"({step['point'][0]}, {step['point'][1]}) with label {step['label']!r} "
+                f"is {step['distance']:.3f} units from the query."
+            )
+            st.dataframe(
+                [
+                    {
+                        "Rank": item["rank"],
+                        "Point": f"({item['point'][0]}, {item['point'][1]})",
+                        "Label": item["label"],
+                        "Distance": item["distance"],
+                        "k-NN vote": (
+                            "Included" if item["rank"] <= knn_result["k"] else "Outside k"
+                        ),
+                    }
+                    for item in trace[:step_number]
+                ],
+                hide_index=True,
+                use_container_width=True,
+            )
 
 with tensorflow_tab:
     st.subheader("Train a small TensorFlow regression model")
