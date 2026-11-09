@@ -312,6 +312,151 @@ with optimization_tab:
         )
         st.success(f"Stopped at x = {path[-1]} with score {-(path[-1] - 3) ** 2 + 9}.")
 
+with more_algorithms_tab:
+    st.subheader("Explore additional algorithms")
+    dijkstra_tab, annealing_tab, game_search_tab, knn_tab = st.tabs(
+        ["Dijkstra", "Simulated annealing", "Minimax", "Nearest neighbors"]
+    )
+
+    with dijkstra_tab:
+        st.write("Find the shortest distance from a start node using the weighted graph above.")
+        dijkstra_start = st.selectbox("Start node", list(weighted_graph), key="dijkstra_start")
+        if st.button("Run Dijkstra", type="primary"):
+            distances = dict(dijikstra(weighted_graph, dijkstra_start))
+            st.session_state["dijkstra_result"] = [
+                {
+                    "Node": node,
+                    "Distance": distances.get(node, "Unreachable"),
+                }
+                for node in weighted_graph
+            ]
+        if "dijkstra_result" in st.session_state:
+            st.dataframe(st.session_state["dijkstra_result"], hide_index=True, use_container_width=True)
+
+    with annealing_tab:
+        st.write(
+            "Maximize `f(x) = -(x - 3)² + 9`. Unlike hill climbing, simulated annealing "
+            "can accept a worse move while the temperature is high."
+        )
+        annealing_start = st.slider("Starting position", -10, 10, -8, key="annealing_start")
+        first, second = st.columns(2)
+        temperature = first.slider("Initial temperature", 2, 100, 25, key="annealing_temperature")
+        cooling_rate = second.slider("Cooling rate", 0.80, 0.99, 0.90, key="annealing_cooling")
+        if st.button("Run simulated annealing", type="primary"):
+            objective = lambda state: -(state.value - 3) ** 2 + 9
+            final_state = simulatedAnnealing(
+                _IntegerState(annealing_start),
+                objective,
+                temperature,
+                cooling_rate,
+            )
+            st.session_state["annealing_result"] = {
+                "position": final_state.value,
+                "score": objective(final_state),
+            }
+        annealing_result = st.session_state.get("annealing_result")
+        if annealing_result:
+            first, second = st.columns(2)
+            first.metric("Final accepted position", annealing_result["position"])
+            second.metric("Objective score", annealing_result["score"])
+            st.caption("The final state may differ between runs because moves are sampled randomly.")
+
+    with game_search_tab:
+        st.write("Set eight terminal scores for a three-ply binary game tree.")
+        default_scores = [3, 5, 2, 9, 12, 5, 23, 7]
+        score_columns = st.columns(4)
+        leaf_scores = [
+            column.number_input(
+                f"Leaf {index + 1}",
+                value=score,
+                step=1,
+                key=f"minimax_leaf_{index}",
+            )
+            for index, (column, score) in enumerate(zip(score_columns * 2, default_scores))
+        ]
+        if st.button("Compare minimax methods", type="primary"):
+            def build_tree(scores):
+                if len(scores) == 1:
+                    return _GameState(score=scores[0])
+                midpoint = len(scores) // 2
+                return _GameState(
+                    children=[build_tree(scores[:midpoint]), build_tree(scores[midpoint:])]
+                )
+
+            def evaluate(state):
+                return state.score
+
+            tree = build_tree(leaf_scores)
+            minimax_score = miniMaxAlgorithm(tree, 3, True, evaluate)
+            pruned_score = alphaBetaPruning(
+                tree,
+                3,
+                float("-inf"),
+                float("inf"),
+                True,
+                evaluate,
+            )
+            st.session_state["game_search_result"] = (minimax_score, pruned_score)
+        game_search_result = st.session_state.get("game_search_result")
+        if game_search_result:
+            first, second = st.columns(2)
+            first.metric("Minimax score", game_search_result[0])
+            second.metric("Alpha-beta score", game_search_result[1])
+            st.caption("Both methods return the same optimal score; alpha-beta can skip branches.")
+
+    with knn_tab:
+        st.write("Classify a two-dimensional point using k-nearest neighbors.")
+        with st.form("knn-controls"):
+            training_text = st.text_area(
+                "Training rows (x, y, label)",
+                "1, 1, red\n2, 1, red\n4, 4, blue\n5, 4, blue",
+                help="Enter one point and label per line, separated by commas.",
+            )
+            first, second, third = st.columns(3)
+            query_x = first.number_input("Query x", value=3.5, key="knn_query_x")
+            query_y = second.number_input("Query y", value=3.5, key="knn_query_y")
+            neighbor_count = third.number_input(
+                "k",
+                min_value=1,
+                max_value=50,
+                value=3,
+                step=1,
+                key="knn_k",
+            )
+            submitted_knn = st.form_submit_button("Classify point", type="primary")
+
+        if submitted_knn:
+            try:
+                training_data = []
+                for line in training_text.splitlines():
+                    if not line.strip():
+                        continue
+                    fields = [field.strip() for field in line.split(",")]
+                    if len(fields) != 3 or not fields[2]:
+                        raise ValueError("Each training row must contain x, y, and a non-empty label.")
+                    training_data.append(
+                        ((float(fields[0]), float(fields[1])), fields[2])
+                    )
+                if not training_data:
+                    raise ValueError("Enter at least one training row.")
+                if neighbor_count > len(training_data):
+                    raise ValueError("k cannot exceed the number of training rows.")
+                query_point = [query_x, query_y]
+                st.session_state["knn_result"] = {
+                    "knn": kNearestNeighbors(training_data, query_point, int(neighbor_count)),
+                    "nearest": euclideanAlgorithm(training_data, query_point),
+                    "query": query_point,
+                }
+            except ValueError as error:
+                st.error(f"Could not classify point: {error}")
+
+        knn_result = st.session_state.get("knn_result")
+        if knn_result:
+            first, second = st.columns(2)
+            first.metric("k-NN class", knn_result["knn"])
+            second.metric("Nearest-neighbor class", knn_result["nearest"])
+            st.caption(f"Query point: ({knn_result['query'][0]}, {knn_result['query'][1]})")
+
 with tensorflow_tab:
     st.subheader("Train a small TensorFlow regression model")
     st.write("A compact neural network learns the curve `sin(2x) + 0.15x` from synthetic data.")
