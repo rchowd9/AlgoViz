@@ -2,7 +2,16 @@ import json
 
 import streamlit as st
 
-from algorithms import binaryGCDAlgorithm, gradientDescent
+from algorithms import (
+    alphaBetaPruning,
+    binaryGCDAlgorithm,
+    dijikstra,
+    euclideanAlgorithm,
+    gradientDescent,
+    kNearestNeighbors,
+    miniMaxAlgorithm,
+    simulatedAnnealing,
+)
 from visualization import (
     ARRAY_SEARCH_ALGORITHMS,
     SEARCH_ALGORITHMS,
@@ -38,6 +47,29 @@ SORTING_ALGORITHMS = (
 )
 
 
+class _IntegerState:
+    def __init__(self, value, minimum=-10, maximum=10):
+        self.value = value
+        self.minimum = minimum
+        self.maximum = maximum
+
+    def get_neighbors(self):
+        return [
+            _IntegerState(value, self.minimum, self.maximum)
+            for value in (self.value - 1, self.value + 1)
+            if self.minimum <= value <= self.maximum
+        ]
+
+
+class _GameState:
+    def __init__(self, score=None, children=None):
+        self.score = score
+        self.children = children or []
+
+    def get_children(self):
+        return self.children
+
+
 def graphviz_source(graph, start, goal, order, path):
     visited = set(order)
     path_nodes = set(path or [])
@@ -71,8 +103,16 @@ st.set_page_config(page_title="Algorithm Explorer", page_icon="🔎", layout="wi
 st.title("Algorithm Explorer")
 st.caption("Explore graph search, sorting, local optimization, and a TensorFlow neural network.")
 
-search_tab, array_search_tab, sorting_tab, algorithms_tab, optimization_tab, tensorflow_tab = st.tabs(
-    ["Graph search", "Array search", "Sorting", "Numeric algorithms", "Hill climbing", "TensorFlow"]
+search_tab, array_search_tab, sorting_tab, algorithms_tab, optimization_tab, more_algorithms_tab, tensorflow_tab = st.tabs(
+    [
+        "Graph search",
+        "Array search",
+        "Sorting",
+        "Numeric algorithms",
+        "Hill climbing",
+        "More algorithms",
+        "TensorFlow",
+    ]
 )
 
 with search_tab:
