@@ -411,10 +411,7 @@ with more_algorithms_tab:
                 use_container_width=True,
             )
             st.line_chart(
-                {
-                    "Position": [item["result_state"].value for item in visible_steps],
-                    "Objective score": [item["result_score"] for item in visible_steps],
-                },
+                {"Objective score": [item["result_score"] for item in visible_steps]},
                 height=240,
             )
 

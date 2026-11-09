@@ -107,6 +107,23 @@ class AdditionalAlgorithmTests(unittest.TestCase):
         self.assertEqual(trace[1]["candidate_state"].value, 1)
         self.assertTrue(trace[1]["accepted"])
 
+    def test_simulated_annealing_trace_records_rejected_moves(self):
+        trace = []
+        with patch("algorithms.random.choice", side_effect=lambda neighbors: neighbors[-1]), patch(
+            "algorithms.random.random", return_value=0.9
+        ):
+            result = simulatedAnnealing(
+                IntegerState(1),
+                lambda state: -(state.value ** 2),
+                2,
+                0.5,
+                trace=trace,
+            )
+
+        self.assertEqual(result.value, 1)
+        self.assertFalse(trace[1]["accepted"])
+        self.assertEqual(trace[1]["result_state"].value, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
