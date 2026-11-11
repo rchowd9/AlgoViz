@@ -856,3 +856,58 @@ class DecisionStump:
         else:
             predictions[X[:, self.feature_index] >= self.threshold] = -1
         return predictions
+
+class AdaBoost:
+    """
+    AdaBoost implementation using decision stumps as weak learners.
+    """
+    def __init__(self, n_estimators=50):
+        self.n_estimators = n_estimators
+        self.stumps = []
+
+    def fit(self, X, y):
+        n_samples, n_features = X.shape
+        # Initialize weights equally
+        w = np.full(n_samples, 1 / n_samples)
+
+        for _ in range(self.n_estimators):
+            stump = DecisionStump()
+            min_error = float('inf')
+
+            # Find best stump for current weights
+            for feature_idx in range(n_features):
+                feature_values = X[:, feature_idx]
+                thresholds = np.unique(feature_values)
+                for threshold in thresholds:
+                    for polarity in [1, -1]:
+                        predictions = np.ones(n_samples)
+                        if polarity == 1:
+                            predictions[feature_values < threshold] = -1
+                        else:
+                            predictions[feature_values >= threshold] = -1
+
+                        # Calculate weighted error
+                        error = np.sum(w[y != predictions])
+
+                        if error < min_error:
+                            min_error = error
+                            stump.polarity = polarity
+                            stump.threshold = threshold
+                            stump.feature_index = feature_idx
+
+            # Compute alpha (learner weight)
+            epsilon = 1e-10  # Avoid division by zero
+            stump.alpha = 0.5 * np.log((1 - min_error) / (min_error + epsilon))
+
+            # Update weights
+            predictions = stump.predict(X)
+            w *= np.exp(-stump.alpha * y * predictions)
+            w /= np.sum(w)  # Normalize
+
+            self.stumps.append(stump)
+
+    def predict(self, X):
+        # Aggregate predictions from all stumps
+        stump_preds = [stump.alpha * stump.predict(X) for stump in self.stumps]
+        final_pred = np.sign(np.sum(stump_preds, axis=0))
+        return final_pred
