@@ -834,3 +834,25 @@ def decisionTreeLearning(data, labels, depth=0, max_depth=None):
     best_gain = 0
     best_feature = None
     best_splits = None
+
+import numpy as np
+
+class DecisionStump:
+    """
+    A simple weak learner: decision stump (one-level decision tree).
+    It classifies based on a single feature threshold.
+    """
+    def __init__(self):
+        self.feature_index = None
+        self.threshold = None
+        self.polarity = 1
+        self.alpha = None  # Weight assigned by AdaBoost
+
+    def predict(self, X):
+        n_samples = X.shape[0]
+        predictions = np.ones(n_samples)
+        if self.polarity == 1:
+            predictions[X[:, self.feature_index] < self.threshold] = -1
+        else:
+            predictions[X[:, self.feature_index] >= self.threshold] = -1
+        return predictions
