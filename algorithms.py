@@ -947,9 +947,10 @@ class AdaBoost:
         return final_pred
 
 import numpy as np
-from sklearn.tree import DecisionTreeRegressor
 
 def gradient_boosting(X, y, n_estimators=10, learning_rate=0.1, max_depth=3):
+    from sklearn.tree import DecisionTreeRegressor
+
     # Normalize for stability
     X = np.float32(X)
     y = np.float32(y)
