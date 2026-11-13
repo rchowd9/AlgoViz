@@ -1,9 +1,8 @@
 import random
 import math
-import random
 
 
-def geneticAlgorithm(population, fitness_function, generations, mutation_rate):
+def geneticAlgorithm(population, fitness_function, generations, mutation_rate, trace=None):
     """
     Implements a simple genetic algorithm.
 
@@ -12,19 +11,40 @@ def geneticAlgorithm(population, fitness_function, generations, mutation_rate):
     - fitness_function: Function to evaluate the fitness of an individual.
     - generations: Number of generations to run the algorithm.
     - mutation_rate: Probability of mutation for each individual.
+    - trace: Optional list to receive the best and average fitness per generation.
 
     Returns:
     - The best individual found after the specified number of generations.
     """
+    population = list(population)
+    if not population:
+        raise ValueError("The population must contain at least one individual.")
+    if isinstance(generations, bool) or not isinstance(generations, int) or generations < 0:
+        raise ValueError("Generations must be a non-negative integer.")
+    if (
+        isinstance(mutation_rate, bool)
+        or not isinstance(mutation_rate, (int, float))
+        or not math.isfinite(mutation_rate)
+        or not 0 <= mutation_rate <= 1
+    ):
+        raise ValueError("Mutation rate must be a number between 0 and 1.")
+
     def crossover(parent1, parent2):
         """Create a child by combining two sequence-based individuals."""
         crossover_point = random.randint(0, min(len(parent1), len(parent2)))
         return parent1[:crossover_point] + parent2[crossover_point:]
 
     def mutate(individual):
-        """Swap two positions in a sequence-based individual."""
+        """Mutate a binary string by flipping one bit, or swap sequence positions."""
         if len(individual) < 2:
+            if isinstance(individual, str) and individual in {"0", "1"}:
+                return "1" if individual == "0" else "0"
             return individual
+
+        if isinstance(individual, str) and set(individual) <= {"0", "1"}:
+            position = random.randrange(len(individual))
+            bit = "1" if individual[position] == "0" else "0"
+            return individual[:position] + bit + individual[position + 1:]
 
         first, second = random.sample(range(len(individual)), 2)
         mutated = list(individual)
@@ -36,32 +56,46 @@ def geneticAlgorithm(population, fitness_function, generations, mutation_rate):
             return tuple(mutated)
         return mutated
 
-    for generation in range(generations):
-        # Evaluate fitness of the population
-        fitness_scores = [fitness_function(individual) for individual in population]
-        
-        # Select parents based on fitness
-        def select_parents(population, fitness_scores):
-            ...
+    def record_generation(generation, individuals, fitness_scores):
+        if trace is not None:
+            best_index = max(range(len(individuals)), key=fitness_scores.__getitem__)
+            trace.append(
+                {
+                    "generation": generation,
+                    "best_individual": individuals[best_index],
+                    "best_fitness": fitness_scores[best_index],
+                    "average_fitness": sum(fitness_scores) / len(fitness_scores),
+                }
+            )
 
-        parents = select_parents(population, fitness_scores)
-        
-        # Create next generation through crossover
-        next_generation = []
+    fitness_scores = [fitness_function(individual) for individual in population]
+    best_index = max(range(len(population)), key=fitness_scores.__getitem__)
+    best_individual = population[best_index]
+    best_fitness = fitness_scores[best_index]
+    record_generation(0, population, fitness_scores)
+
+    for generation in range(1, generations + 1):
+        # Select parents with two-way tournaments, allowing a one-member population.
+        def select_parent():
+            candidates = random.sample(range(len(population)), min(2, len(population)))
+            winner = max(candidates, key=fitness_scores.__getitem__)
+            return population[winner]
+
+        next_generation = [best_individual]
         while len(next_generation) < len(population):
-            parent1, parent2 = random.sample(parents, 2)
-            child = crossover(parent1, parent2)
-            next_generation.append(child)
-        
-        # Apply mutation
-        for i in range(len(next_generation)):
+            child = crossover(select_parent(), select_parent())
             if random.random() < mutation_rate:
-                next_generation[i] = mutate(next_generation[i])
-        
+                child = mutate(child)
+            next_generation.append(child)
+
         population = next_generation
-    
-    # Return the best individual from the final population
-    best_individual = max(population, key=fitness_function)
+        fitness_scores = [fitness_function(individual) for individual in population]
+        generation_best_index = max(range(len(population)), key=fitness_scores.__getitem__)
+        if fitness_scores[generation_best_index] > best_fitness:
+            best_individual = population[generation_best_index]
+            best_fitness = fitness_scores[generation_best_index]
+        record_generation(generation, population, fitness_scores)
+
     return best_individual
 
 def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function, trace=None):
