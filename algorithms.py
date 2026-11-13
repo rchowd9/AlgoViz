@@ -935,10 +935,3 @@ def gradient_boosting(X, y, n_estimators=10, learning_rate=0.1, max_depth=3):
         predictions += learning_rate * tree.predict(X)
 
     return predictions
-
-# Example usage
-np.random.seed(42)
-X = np.random.rand(100, 1) - 0.5
-y = 3 * X[:, 0]**2 + 0.05 * np.random.randn(100)
-
-predictions = gradient_boosting(X, y, n_estimators=10, learning_rate=0.1, max_depth=3)
