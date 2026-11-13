@@ -911,3 +911,34 @@ class AdaBoost:
         stump_preds = [stump.alpha * stump.predict(X) for stump in self.stumps]
         final_pred = np.sign(np.sum(stump_preds, axis=0))
         return final_pred
+
+import numpy as np
+from sklearn.tree import DecisionTreeRegressor
+
+def gradient_boosting(X, y, n_estimators=10, learning_rate=0.1, max_depth=3):
+    # Normalize for stability
+    X = np.float32(X)
+    y = np.float32(y)
+
+    # Initial prediction (mean)
+    predictions = np.full(X.shape[0], np.mean(y))
+
+    for i in range(n_estimators):
+        # Compute residuals (negative gradient for squared loss)
+        residuals = y - predictions
+
+        # Fit weak learner to residuals
+        tree = DecisionTreeRegressor(max_depth=max_depth, random_state=0)
+        tree.fit(X, residuals)
+
+        # Update predictions
+        predictions += learning_rate * tree.predict(X)
+
+    return predictions
+
+# Example usage
+np.random.seed(42)
+X = np.random.rand(100, 1) - 0.5
+y = 3 * X[:, 0]**2 + 0.05 * np.random.randn(100)
+
+predictions = gradient_boosting(X, y, n_estimators=10, learning_rate=0.1, max_depth=3)
