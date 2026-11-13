@@ -58,7 +58,7 @@ class AdditionalAlgorithmTests(unittest.TestCase):
     def test_genetic_algorithm_validates_parameters(self):
         with self.assertRaisesRegex(ValueError, "population"):
             geneticAlgorithm([], lambda individual: 0, 1, 0.1)
-        with self.assertRaisesRegex(ValueError, "mutation rate"):
+        with self.assertRaisesRegex(ValueError, "Mutation rate"):
             geneticAlgorithm(["0"], lambda individual: 0, 1, 1.1)
 
     def test_dijkstra_returns_shortest_distances(self):
