@@ -935,3 +935,98 @@ def gradient_boosting(X, y, n_estimators=10, learning_rate=0.1, max_depth=3):
         predictions += learning_rate * tree.predict(X)
 
     return predictions
+
+import numpy as np
+
+# -----------------------------
+# Simple CART Regression Tree
+# -----------------------------
+class RegressionTree:
+    def __init__(self, max_depth=3, min_samples_split=2):
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.tree = None
+
+    def fit(self, X, y):
+        self.tree = self._build_tree(X, y, depth=0)
+
+    def _build_tree(self, X, y, depth):
+        # Stop conditions
+        if depth >= self.max_depth or len(y) < self.min_samples_split:
+            return np.mean(y)
+
+        # Find best split
+        best_feat, best_thresh, best_loss = None, None, float('inf')
+        for feat_idx in range(X.shape[1]):
+            thresholds = np.unique(X[:, feat_idx])
+            for thresh in thresholds:
+                left_mask = X[:, feat_idx] <= thresh
+                right_mask = ~left_mask
+                if len(y[left_mask]) == 0 or len(y[right_mask]) == 0:
+                    continue
+                loss = self._mse(y[left_mask]) + self._mse(y[right_mask])
+                if loss < best_loss:
+                    best_feat, best_thresh, best_loss = feat_idx, thresh, loss
+
+        if best_feat is None:
+            return np.mean(y)
+
+        # Split recursively
+        left_mask = X[:, best_feat] <= best_thresh
+        right_mask = ~left_mask
+        return {
+            'feature': best_feat,
+            'threshold': best_thresh,
+            'left': self._build_tree(X[left_mask], y[left_mask], depth + 1),
+            'right': self._build_tree(X[right_mask], y[right_mask], depth + 1)
+        }
+
+    def _mse(self, y):
+        return np.var(y) * len(y)
+
+    def predict_row(self, row, node):
+        if not isinstance(node, dict):
+            return node
+        if row[node['feature']] <= node['threshold']:
+            return self.predict_row(row, node['left'])
+        else:
+            return self.predict_row(row, node['right'])
+
+    def predict(self, X):
+        return np.array([self.predict_row(row, self.tree) for row in X])
+
+
+# -----------------------------
+# Simplified XGBoost Model
+# -----------------------------
+class XGBoostScratch:
+    def __init__(self, n_estimators=50, learning_rate=0.1, max_depth=3, min_samples_split=2):
+        self.n_estimators = n_estimators
+        self.learning_rate = learning_rate
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.trees = []
+        self.base_prediction = None
+
+    def fit(self, X, y):
+        # Initial prediction is mean of y
+        self.base_prediction = np.mean(y)
+        y_pred = np.full(y.shape, self.base_prediction)
+
+        for _ in range(self.n_estimators):
+            # Compute residuals (negative gradient for MSE loss)
+            residuals = y - y_pred
+
+            # Fit regression tree to residuals
+            tree = RegressionTree(max_depth=self.max_depth, min_samples_split=self.min_samples_split)
+            tree.fit(X, residuals)
+            self.trees.append(tree)
+
+            # Update predictions
+            y_pred += self.learning_rate * tree.predict(X)
+
+    def predict(self, X):
+        y_pred = np.full(X.shape[0], self.base_prediction)
+        for tree in self.trees:
+            y_pred += self.learning_rate * tree.predict(X)
+        return y_pred
