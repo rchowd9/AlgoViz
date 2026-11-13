@@ -1,4 +1,5 @@
 import json
+import random
 
 import streamlit as st
 
@@ -7,6 +8,7 @@ from algorithms import (
     binaryGCDAlgorithm,
     dijikstra,
     euclideanAlgorithm,
+    geneticAlgorithm,
     gradientDescent,
     kNearestNeighbors,
     miniMaxAlgorithm,
@@ -314,8 +316,8 @@ with optimization_tab:
 
 with more_algorithms_tab:
     st.subheader("Explore additional algorithms")
-    dijkstra_tab, annealing_tab, game_search_tab, knn_tab = st.tabs(
-        ["Dijkstra", "Simulated annealing", "Minimax", "Nearest neighbors"]
+    dijkstra_tab, annealing_tab, game_search_tab, knn_tab, genetic_tab = st.tabs(
+        ["Dijkstra", "Simulated annealing", "Minimax", "Nearest neighbors", "Genetic algorithm"]
     )
 
     with dijkstra_tab:
@@ -495,6 +497,59 @@ with more_algorithms_tab:
                 ],
                 hide_index=True,
                 use_container_width=True,
+            )
+
+    with genetic_tab:
+        st.write(
+            "Maximize the number of 1s in a binary string. Selection, crossover, "
+            "and mutation evolve a population toward the all-ones solution."
+        )
+        with st.form("genetic-algorithm-controls"):
+            first, second = st.columns(2)
+            genome_length = first.slider("Bit-string length", 4, 64, 16, key="genome_length")
+            population_size = second.slider("Population size", 4, 100, 24, key="population_size")
+            first, second = st.columns(2)
+            generations = first.slider("Generations", 1, 100, 30, key="genetic_generations")
+            mutation_rate = second.slider(
+                "Mutation rate", 0.0, 1.0, 0.1, key="genetic_mutation_rate"
+            )
+            submitted_genetic = st.form_submit_button("Run genetic algorithm", type="primary")
+
+        if submitted_genetic:
+            initial_population = [
+                "".join(random.choices("01", k=genome_length))
+                for _ in range(population_size)
+            ]
+            genetic_trace = []
+            best_individual = geneticAlgorithm(
+                initial_population,
+                lambda individual: individual.count("1"),
+                generations,
+                mutation_rate,
+                trace=genetic_trace,
+            )
+            st.session_state["genetic_result"] = {
+                "individual": best_individual,
+                "fitness": best_individual.count("1"),
+                "trace": genetic_trace,
+            }
+
+        genetic_result = st.session_state.get("genetic_result")
+        if genetic_result:
+            first, second = st.columns(2)
+            first.metric("Best bit string", genetic_result["individual"])
+            second.metric("Number of 1s", genetic_result["fitness"], delta=f"/ {genome_length}")
+            st.line_chart(
+                {
+                    "Best fitness": [
+                        step["best_fitness"] for step in genetic_result["trace"]
+                    ],
+                    "Average fitness": [
+                        step["average_fitness"] for step in genetic_result["trace"]
+                    ],
+                },
+                x="Generation",
+                height=280,
             )
 
     with knn_tab:
