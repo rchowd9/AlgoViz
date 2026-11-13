@@ -5,6 +5,7 @@ from algorithms import (
     alphaBetaPruning,
     dijikstra,
     euclideanAlgorithm,
+    geneticAlgorithm,
     kNearestNeighbors,
     miniMaxAlgorithm,
     simulatedAnnealing,
@@ -29,6 +30,37 @@ class IntegerState:
 
 
 class AdditionalAlgorithmTests(unittest.TestCase):
+    def test_genetic_algorithm_evolves_binary_string_and_records_trace(self):
+        population = ["00", "00", "00", "00"]
+        trace = []
+        with patch("algorithms.random.random", return_value=0), patch(
+            "algorithms.random.randrange", return_value=0
+        ):
+            result = geneticAlgorithm(
+                population,
+                lambda individual: individual.count("1"),
+                1,
+                1,
+                trace=trace,
+            )
+
+        self.assertEqual(result, "10")
+        self.assertEqual(population, ["00", "00", "00", "00"])
+        self.assertEqual([step["generation"] for step in trace], [0, 1])
+        self.assertEqual(trace[-1]["best_fitness"], 1)
+
+    def test_genetic_algorithm_handles_single_member_and_zero_generations(self):
+        self.assertEqual(
+            geneticAlgorithm(["001"], lambda individual: individual.count("1"), 0, 0),
+            "001",
+        )
+
+    def test_genetic_algorithm_validates_parameters(self):
+        with self.assertRaisesRegex(ValueError, "population"):
+            geneticAlgorithm([], lambda individual: 0, 1, 0.1)
+        with self.assertRaisesRegex(ValueError, "mutation rate"):
+            geneticAlgorithm(["0"], lambda individual: 0, 1, 1.1)
+
     def test_dijkstra_returns_shortest_distances(self):
         graph = {
             "A": {"B": 4, "C": 1},

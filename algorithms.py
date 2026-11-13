@@ -36,15 +36,15 @@ def geneticAlgorithm(population, fitness_function, generations, mutation_rate, t
 
     def mutate(individual):
         """Mutate a binary string by flipping one bit, or swap sequence positions."""
-        if len(individual) < 2:
-            if isinstance(individual, str) and individual in {"0", "1"}:
-                return "1" if individual == "0" else "0"
-            return individual
-
         if isinstance(individual, str) and set(individual) <= {"0", "1"}:
+            if not individual:
+                return individual
             position = random.randrange(len(individual))
             bit = "1" if individual[position] == "0" else "0"
             return individual[:position] + bit + individual[position + 1:]
+
+        if len(individual) < 2:
+            return individual
 
         first, second = random.sample(range(len(individual)), 2)
         mutated = list(individual)

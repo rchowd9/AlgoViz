@@ -17,9 +17,10 @@ strategies. The Streamlit UI includes:
   objective.
 - **Additional algorithms:** compare Dijkstra distances on the editable graph,
   run simulated annealing on the hill-climbing objective, compare minimax with
-  alpha-beta pruning on a sample game tree, and classify points with k-nearest
-  neighbors. Step-by-step traces show annealing proposals and decisions,
-  minimax evaluations and propagated scores, and nearest-neighbor distances.
+  alpha-beta pruning on a sample game tree, classify points with k-nearest
+  neighbors, and evolve a binary string with a genetic algorithm. Step-by-step
+  traces show annealing proposals and decisions, minimax evaluations and
+  propagated scores, nearest-neighbor distances, and genetic-algorithm fitness.
 - **TensorFlow:** train a small neural network on synthetic regression data and
   view its predictions and training-loss curve. TensorFlow is imported only
   when training is requested.

@@ -531,6 +531,7 @@ with more_algorithms_tab:
             st.session_state["genetic_result"] = {
                 "individual": best_individual,
                 "fitness": best_individual.count("1"),
+                "genome_length": genome_length,
                 "trace": genetic_trace,
             }
 
@@ -538,9 +539,15 @@ with more_algorithms_tab:
         if genetic_result:
             first, second = st.columns(2)
             first.metric("Best bit string", genetic_result["individual"])
-            second.metric("Number of 1s", genetic_result["fitness"], delta=f"/ {genome_length}")
+            second.metric(
+                "Fitness",
+                f"{genetic_result['fitness']} / {genetic_result['genome_length']}",
+            )
             st.line_chart(
                 {
+                    "Generation": [
+                        step["generation"] for step in genetic_result["trace"]
+                    ],
                     "Best fitness": [
                         step["best_fitness"] for step in genetic_result["trace"]
                     ],
