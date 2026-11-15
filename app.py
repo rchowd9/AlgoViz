@@ -11,6 +11,7 @@ from algorithms import (
     geneticAlgorithm,
     gradientDescent,
     kNearestNeighbors,
+    localBeamSearch,
     miniMaxAlgorithm,
     simulatedAnnealing,
 )
