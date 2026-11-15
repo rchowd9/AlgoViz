@@ -1104,3 +1104,57 @@ class isolationForest:
 
         self.right = isolationForest(depth=self.depth + 1, max_depth=self.max_depth)
         self.right.fit(X[right_mask])
+
+    def path_length(self, x):
+        # Path length for a single sample
+        if self.split_attr is None or self.left is None or self.right is None:
+            # External node: use c(n) adjustment
+            return self.depth + c_factor(self.size)
+        if x[self.split_attr] < self.split_value:
+            return self.left.path_length(x)
+        else:
+            return self.right.path_length(x)
+
+
+# ------------------------------
+# Helper: Average Path Length c(n)
+# ------------------------------
+def c_factor(n):
+    """Average path length of unsuccessful search in Binary Search Tree."""
+    if n <= 1:
+        return 0
+    return 2 * (math.log(n - 1) + 0.5772156649) - (2 * (n - 1) / n)
+
+
+# ------------------------------
+# Isolation Forest Definition
+# ------------------------------
+class IsolationForest:
+    def __init__(self, n_trees=100, sample_size=256):
+        self.n_trees = n_trees
+        self.sample_size = sample_size
+        self.trees = []
+
+    def fit(self, X):
+        self.trees = []
+        max_depth = math.ceil(math.log2(self.sample_size))
+        for _ in range(self.n_trees):
+            # Random subsample without replacement
+            sample_indices = np.random.choice(len(X), self.sample_size, replace=False)
+            sample = X[sample_indices]
+            tree = IsolationTree(depth=0, max_depth=max_depth)
+            tree.fit(sample)
+            self.trees.append(tree)
+
+    def anomaly_score(self, X):
+        scores = []
+        for x in X:
+            path_lengths = [tree.path_length(x) for tree in self.trees]
+            avg_path_length = np.mean(path_lengths)
+            score = 2 ** (-avg_path_length / c_factor(self.sample_size))
+            scores.append(score)
+        return np.array(scores)
+
+    def predict(self, X, threshold=0.5):
+        scores = self.anomaly_score(X)
+        return np.where(scores >= threshold, 1, 0)  # 1 = anomaly, 0 = normal
