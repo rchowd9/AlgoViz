@@ -1099,8 +1099,8 @@ class isolationForest:
         left_mask = col_values < self.split_value
         right_mask = ~left_mask
 
-        self.left = IsolationTree(depth=self.depth + 1, max_depth=self.max_depth)
+        self.left = isolationForest(depth=self.depth + 1, max_depth=self.max_depth)
         self.left.fit(X[left_mask])
 
-        self.right = IsolationTree(depth=self.depth + 1, max_depth=self.max_depth)
+        self.right = isolationForest(depth=self.depth + 1, max_depth=self.max_depth)
         self.right.fit(X[right_mask])
