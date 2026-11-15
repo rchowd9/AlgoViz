@@ -1099,10 +1099,10 @@ class isolationTree:
         left_mask = col_values < self.split_value
         right_mask = ~left_mask
 
-        self.left = isolationForest(depth=self.depth + 1, max_depth=self.max_depth)
+        self.left = isolationTree(depth=self.depth + 1, max_depth=self.max_depth)
         self.left.fit(X[left_mask])
 
-        self.right = isolationForest(depth=self.depth + 1, max_depth=self.max_depth)
+        self.right = isolationTree(depth=self.depth + 1, max_depth=self.max_depth)
         self.right.fit(X[right_mask])
 
     def path_length(self, x):
@@ -1142,7 +1142,7 @@ class IsolationForest:
             # Random subsample without replacement
             sample_indices = np.random.choice(len(X), self.sample_size, replace=False)
             sample = X[sample_indices]
-            tree = IsolationTree(depth=0, max_depth=max_depth)
+            tree = isolationTree(depth=0, max_depth=max_depth)
             tree.fit(sample)
             self.trees.append(tree)
 
