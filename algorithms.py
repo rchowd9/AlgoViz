@@ -1066,7 +1066,7 @@ class XGBoostScratch:
             y_pred += self.learning_rate * tree.predict(X)
         return y_pred
 
-class isolationForest:
+class isolationTree:
     def __init__(self, depth=0, max_depth=None):
         self.depth = depth
         self.max_depth = max_depth
