@@ -317,8 +317,15 @@ with optimization_tab:
 
 with more_algorithms_tab:
     st.subheader("Explore additional algorithms")
-    dijkstra_tab, annealing_tab, game_search_tab, knn_tab, genetic_tab = st.tabs(
-        ["Dijkstra", "Simulated annealing", "Minimax", "Nearest neighbors", "Genetic algorithm"]
+    dijkstra_tab, annealing_tab, game_search_tab, knn_tab, genetic_tab, beam_tab = st.tabs(
+        [
+            "Dijkstra",
+            "Simulated annealing",
+            "Minimax",
+            "Nearest neighbors",
+            "Genetic algorithm",
+            "Local beam search",
+        ]
     )
 
     with dijkstra_tab:
@@ -559,6 +566,31 @@ with more_algorithms_tab:
                 x="Generation",
                 height=280,
             )
+
+    with beam_tab:
+        st.write(
+            "Keep only the strongest K frontier states at each step to explore a broader search space "
+            "without fully expanding every candidate."
+        )
+        first, second = st.columns(2)
+        beam_start = first.selectbox("Start node", list(weighted_graph), key="beam_start_node")
+        beam_width = second.slider("Beam width", 1, 5, 2, key="beam_width")
+        if st.button("Run local beam search", type="primary"):
+            beam_graph = {node: list(neighbors) for node, neighbors in weighted_graph.items()}
+            beam_trace = localBeamSearch(
+                beam_graph,
+                beam_start,
+                beam_width,
+                lambda node: len(beam_graph.get(node, [])),
+            )
+            st.session_state["beam_result"] = beam_trace
+
+        beam_result = st.session_state.get("beam_result")
+        if beam_result:
+            st.write("**Frontier order:**", " → ".join(beam_result))
+            st.caption("The beam size limits how many nodes remain active after each expansion step.")
+        else:
+            st.info("Run a beam search to see which states remain in the active frontier.")
 
     with knn_tab:
         st.write("Classify a two-dimensional point using k-nearest neighbors.")
