@@ -1067,3 +1067,11 @@ class XGBoostScratch:
         return y_pred
 
 class isolationForest:
+    def __init__(self, depth=0, max_depth=None):
+        self.depth = depth
+        self.max_depth = max_depth
+        self.split_attr = None
+        self.split_value = None
+        self.left = None
+        self.right = None
+        self.size = 0
