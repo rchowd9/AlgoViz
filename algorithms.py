@@ -1075,3 +1075,32 @@ class isolationForest:
         self.left = None
         self.right = None
         self.size = 0
+
+    def fit(self, X):
+        self.size = len(X)
+
+        # Stop conditions: max depth reached or only one sample
+        if self.depth >= self.max_depth or self.size <= 1:
+            return
+
+        # Randomly choose an attribute (column)
+        self.split_attr = random.randint(0, X.shape[1] - 1)
+
+        # Randomly choose a split value between min and max of that attribute
+        col_values = X[:, self.split_attr]
+        min_val, max_val = col_values.min(), col_values.max()
+
+        if min_val == max_val:  # No split possible
+            return
+
+        self.split_value = random.uniform(min_val, max_val)
+
+        # Split data into left and right subsets
+        left_mask = col_values < self.split_value
+        right_mask = ~left_mask
+
+        self.left = IsolationTree(depth=self.depth + 1, max_depth=self.max_depth)
+        self.left.fit(X[left_mask])
+
+        self.right = IsolationTree(depth=self.depth + 1, max_depth=self.max_depth)
+        self.right.fit(X[right_mask])
