@@ -1065,3 +1065,5 @@ class XGBoostScratch:
         for tree in self.trees:
             y_pred += self.learning_rate * tree.predict(X)
         return y_pred
+
+class isolationForest:
