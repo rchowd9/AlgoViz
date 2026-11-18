@@ -147,7 +147,7 @@ def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function, trace=N
     return search(state, depth, maximizing_player, ())
 
 
-def alphaBetaPruning(state, depth, alpha, beta, maximizing_player, evaluate_function):
+def alphaBetaPruning(state, depth, alpha, beta, maximizing_player, evaluate_function, trace=None):
     """
     Implements the minimax algorithm with alpha-beta pruning for decision making in two-player games.
 
@@ -162,31 +162,114 @@ def alphaBetaPruning(state, depth, alpha, beta, maximizing_player, evaluate_func
     Returns:
     - The best score for the current player at the given state.
     """
-    if depth == 0:
-        return evaluate_function(state)
+    def search(current_state, remaining_depth, alpha_value, beta_value, maximizing, node_path):
+        if remaining_depth == 0:
+            score = evaluate_function(current_state)
+            if trace is not None:
+                trace.append(
+                    {
+                        "node_path": node_path,
+                        "depth": len(node_path),
+                        "player": "Max" if maximizing else "Min",
+                        "event": "Leaf evaluation",
+                        "score": score,
+                    }
+                )
+            return score
 
-    children = state.get_children()
-    if not children:
-        return evaluate_function(state)
+        children = current_state.get_children()
+        if not children:
+            score = evaluate_function(current_state)
+            if trace is not None:
+                trace.append(
+                    {
+                        "node_path": node_path,
+                        "depth": len(node_path),
+                        "player": "Max" if maximizing else "Min",
+                        "event": "Leaf evaluation",
+                        "score": score,
+                    }
+                )
+            return score
 
-    if maximizing_player:
-        max_eval = float('-inf')
-        for child in children:
-            eval = alphaBetaPruning(child, depth - 1, alpha, beta, False, evaluate_function)
-            max_eval = max(max_eval, eval)
-            alpha = max(alpha, eval)
-            if beta <= alpha:
-                break  # Beta cut-off
-        return max_eval
-    else:
+        if maximizing:
+            max_eval = float('-inf')
+            for index, child in enumerate(children):
+                eval_value = search(
+                    child,
+                    remaining_depth - 1,
+                    alpha_value,
+                    beta_value,
+                    False,
+                    node_path + (index,),
+                )
+                max_eval = max(max_eval, eval_value)
+                alpha_value = max(alpha_value, eval_value)
+                if beta_value <= alpha_value:
+                    pruned = len(children) - index - 1
+                    if trace is not None:
+                        trace.append(
+                            {
+                                "node_path": node_path,
+                                "depth": len(node_path),
+                                "player": "Max",
+                                "event": "Beta cut-off",
+                                "score": max_eval,
+                                "pruned": pruned,
+                            }
+                        )
+                    break
+            if trace is not None:
+                trace.append(
+                    {
+                        "node_path": node_path,
+                        "depth": len(node_path),
+                        "player": "Max",
+                        "event": "Select maximum",
+                        "score": max_eval,
+                    }
+                )
+            return max_eval
+
         min_eval = float('inf')
-        for child in children:
-            eval = alphaBetaPruning(child, depth - 1, alpha, beta, True, evaluate_function)
-            min_eval = min(min_eval, eval)
-            beta = min(beta, eval)
-            if beta <= alpha:
-                break  # Alpha cut-off
+        for index, child in enumerate(children):
+            eval_value = search(
+                child,
+                remaining_depth - 1,
+                alpha_value,
+                beta_value,
+                True,
+                node_path + (index,),
+            )
+            min_eval = min(min_eval, eval_value)
+            beta_value = min(beta_value, eval_value)
+            if beta_value <= alpha_value:
+                pruned = len(children) - index - 1
+                if trace is not None:
+                    trace.append(
+                        {
+                            "node_path": node_path,
+                            "depth": len(node_path),
+                            "player": "Min",
+                            "event": "Alpha cut-off",
+                            "score": min_eval,
+                            "pruned": pruned,
+                        }
+                    )
+                break
+        if trace is not None:
+            trace.append(
+                {
+                    "node_path": node_path,
+                    "depth": len(node_path),
+                    "player": "Min",
+                    "event": "Select minimum",
+                    "score": min_eval,
+                }
+            )
         return min_eval
+
+    return search(state, depth, alpha, beta, maximizing_player, ())
 
 
 def hillClimbing(state, evaluate_function):

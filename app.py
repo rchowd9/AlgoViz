@@ -460,6 +460,17 @@ with more_algorithms_tab:
                 float("inf"),
                 True,
                 evaluate,
+                trace=st.session_state.setdefault("alphabeta_trace", []),
+            )
+            st.session_state["alphabeta_trace"] = []
+            pruned_score = alphaBetaPruning(
+                tree,
+                3,
+                float("-inf"),
+                float("inf"),
+                True,
+                evaluate,
+                trace=st.session_state["alphabeta_trace"],
             )
             st.session_state["game_search_result"] = (minimax_score, pruned_score)
             st.session_state["minimax_trace"] = minimax_trace
