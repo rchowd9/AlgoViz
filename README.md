@@ -20,7 +20,8 @@ strategies. The Streamlit UI includes:
   alpha-beta pruning on a sample game tree, classify points with k-nearest
   neighbors, and evolve a binary string with a genetic algorithm. Step-by-step
   traces show annealing proposals and decisions, minimax evaluations and
-  propagated scores, nearest-neighbor distances, and genetic-algorithm fitness.
+  propagated scores, alpha-beta cutoffs and skipped branches, nearest-neighbor
+  distances, and genetic-algorithm fitness.
 - **TensorFlow:** train a small neural network on synthetic regression data and
   view its predictions and training-loss curve. TensorFlow is imported only
   when training is requested.

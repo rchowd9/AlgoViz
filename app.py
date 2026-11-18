@@ -453,15 +453,6 @@ with more_algorithms_tab:
             tree = build_tree(leaf_scores)
             minimax_trace = []
             minimax_score = miniMaxAlgorithm(tree, 3, True, evaluate, trace=minimax_trace)
-            pruned_score = alphaBetaPruning(
-                tree,
-                3,
-                float("-inf"),
-                float("inf"),
-                True,
-                evaluate,
-                trace=st.session_state.setdefault("alphabeta_trace", []),
-            )
             st.session_state["alphabeta_trace"] = []
             pruned_score = alphaBetaPruning(
                 tree,
@@ -476,10 +467,29 @@ with more_algorithms_tab:
             st.session_state["minimax_trace"] = minimax_trace
         game_search_result = st.session_state.get("game_search_result")
         if game_search_result:
-            first, second = st.columns(2)
+            alpha_trace = st.session_state.get("alphabeta_trace", [])
+            pruned_count = sum(step.get("pruned", 0) for step in alpha_trace)
+            first, second, third = st.columns(3)
             first.metric("Minimax score", game_search_result[0])
             second.metric("Alpha-beta score", game_search_result[1])
-            st.caption("Both methods return the same optimal score; alpha-beta can skip branches.")
+            third.metric("Branches skipped", pruned_count)
+            st.caption("Both methods return the same optimal score; alpha-beta skips branches that cannot affect the result.")
+
+            if alpha_trace:
+                cutoff_steps = [
+                    step
+                    for step in alpha_trace
+                    if step["event"] in {"Alpha cut-off", "Beta cut-off"}
+                ]
+                if cutoff_steps:
+                    st.write(
+                        "**Alpha-beta pruning:** "
+                        + ", ".join(
+                            f"{step['event']} at depth {step['depth']} "
+                            f"(skipped {step['pruned']} branches)"
+                            for step in cutoff_steps
+                        )
+                    )
             trace = st.session_state["minimax_trace"]
             step_number = st.slider(
                 "Minimax step",

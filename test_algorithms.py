@@ -89,6 +89,34 @@ class AdditionalAlgorithmTests(unittest.TestCase):
             3,
         )
 
+    def test_alpha_beta_trace_records_cutoffs_and_skipped_branches(self):
+        tree = GameState(
+            children=[
+                GameState(children=[GameState(3), GameState(5)]),
+                GameState(children=[GameState(2), GameState(9)]),
+            ]
+        )
+        trace = []
+
+        score = alphaBetaPruning(
+            tree,
+            2,
+            float("-inf"),
+            float("inf"),
+            True,
+            lambda state: state.score,
+            trace=trace,
+        )
+
+        cutoff_steps = [
+            step
+            for step in trace
+            if step["event"] in {"Alpha cut-off", "Beta cut-off"}
+        ]
+        self.assertEqual(score, 3)
+        self.assertTrue(cutoff_steps)
+        self.assertTrue(all(step["pruned"] >= 1 for step in cutoff_steps))
+
     def test_minimax_trace_records_leaf_evaluations_and_propagated_scores(self):
         tree = GameState(
             children=[
