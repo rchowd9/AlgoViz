@@ -21,7 +21,9 @@ strategies. The Streamlit UI includes:
   neighbors, and evolve a binary string with a genetic algorithm. Step-by-step
   traces show annealing proposals and decisions, minimax evaluations and
   propagated scores, alpha-beta cutoffs and skipped branches, nearest-neighbor
-  distances, and genetic-algorithm fitness.
+  distances, and genetic-algorithm fitness. Train a scikit-learn decision tree
+  from labeled 2D points and inspect its Graphviz visualization, depth, leaves,
+  and training accuracy.
 - **TensorFlow:** train a small neural network on synthetic regression data and
   view its predictions and training-loss curve. TensorFlow is imported only
   when training is requested.

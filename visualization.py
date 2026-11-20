@@ -26,6 +26,18 @@ ARRAY_SEARCH_ALGORITHMS = (
 )
 
 
+def decision_tree_source(classifier, feature_names):
+    from sklearn.tree import export_graphviz
+
+    return export_graphviz(
+        classifier,
+        feature_names=feature_names,
+        class_names=[str(label) for label in classifier.classes_],
+        filled=True,
+        rounded=True,
+    )
+
+
 def parse_graph(graph_data):
     if isinstance(graph_data, str):
         try:

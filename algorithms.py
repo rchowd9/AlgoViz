@@ -743,6 +743,14 @@ class DecisionTree:
         return np.asarray([classify(row) for row in rows])
 
 
+def trainDecisionTreeClassifier(data, labels, max_depth=3):
+    """Fit a scikit-learn decision tree classifier."""
+    from sklearn.tree import DecisionTreeClassifier
+
+    classifier = DecisionTreeClassifier(max_depth=max_depth, random_state=0)
+    return classifier.fit(data, labels)
+
+
 class RandomForest:
     def __init__(self, n_estimators=10, max_depth=5, bootstrap=True):
         self.n_estimators = n_estimators

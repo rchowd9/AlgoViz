@@ -14,10 +14,12 @@ from algorithms import (
     localBeamSearch,
     miniMaxAlgorithm,
     simulatedAnnealing,
+    trainDecisionTreeClassifier,
 )
 from visualization import (
     ARRAY_SEARCH_ALGORITHMS,
     SEARCH_ALGORITHMS,
+    decision_tree_source,
     hill_climb_trace,
     parse_graph,
     search_array,
@@ -317,12 +319,13 @@ with optimization_tab:
 
 with more_algorithms_tab:
     st.subheader("Explore additional algorithms")
-    dijkstra_tab, annealing_tab, game_search_tab, knn_tab, genetic_tab, beam_tab = st.tabs(
+    dijkstra_tab, annealing_tab, game_search_tab, knn_tab, decision_tree_tab, genetic_tab, beam_tab = st.tabs(
         [
             "Dijkstra",
             "Simulated annealing",
             "Minimax",
             "Nearest neighbors",
+            "Decision tree",
             "Genetic algorithm",
             "Local beam search",
         ]
@@ -527,6 +530,70 @@ with more_algorithms_tab:
                 hide_index=True,
                 use_container_width=True,
             )
+
+    with decision_tree_tab:
+        st.write("Train a decision tree classifier on two-dimensional labeled points.")
+        with st.form("decision-tree-controls"):
+            tree_training_text = st.text_area(
+                "Training rows (x, y, label)",
+                "1, 1, red\n2, 1, red\n4, 4, blue\n5, 4, blue",
+                help="Enter one point and label per line, separated by commas.",
+            )
+            tree_max_depth = st.number_input(
+                "Maximum tree depth",
+                min_value=1,
+                max_value=10,
+                value=3,
+                step=1,
+                key="decision_tree_max_depth",
+            )
+            submitted_tree = st.form_submit_button("Train decision tree", type="primary")
+
+        if submitted_tree:
+            try:
+                training_features = []
+                training_labels = []
+                for line_number, line in enumerate(tree_training_text.splitlines(), start=1):
+                    if not line.strip():
+                        continue
+                    fields = [field.strip() for field in line.split(",")]
+                    if len(fields) != 3 or not fields[2]:
+                        raise ValueError(
+                            f"Training row {line_number} must contain x, y, and a non-empty label."
+                        )
+                    try:
+                        training_features.append([float(fields[0]), float(fields[1])])
+                    except ValueError as error:
+                        raise ValueError(
+                            f"Training row {line_number} must have numeric x and y values."
+                        ) from error
+                    training_labels.append(fields[2])
+                if not training_features:
+                    raise ValueError("Enter at least one training row.")
+
+                classifier = trainDecisionTreeClassifier(
+                    training_features,
+                    training_labels,
+                    max_depth=int(tree_max_depth),
+                )
+                st.session_state["decision_tree_result"] = {
+                    "source": decision_tree_source(classifier, ["x", "y"]),
+                    "depth": classifier.get_depth(),
+                    "leaves": classifier.get_n_leaves(),
+                    "accuracy": classifier.score(training_features, training_labels),
+                }
+            except ValueError as error:
+                st.error(f"Could not train decision tree: {error}")
+
+        tree_result = st.session_state.get("decision_tree_result")
+        if tree_result:
+            first, second, third = st.columns(3)
+            first.metric("Tree depth", tree_result["depth"])
+            second.metric("Leaf nodes", tree_result["leaves"])
+            third.metric("Training accuracy", f"{tree_result['accuracy']:.1%}")
+            st.graphviz_chart(tree_result["source"], width="stretch")
+        else:
+            st.info("Enter labeled points and train the classifier to visualize its decision tree.")
 
     with genetic_tab:
         st.write(
