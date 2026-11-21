@@ -232,20 +232,48 @@ def linearSearch(arr, targetVal):
             return i
     return -1
 
-def binarySearch(arr, targetVal):
+def binarySearch(arr, targetVal, trace=None):
     left = 0
     right = len(arr) - 1
 
     while left <= right:
+        current_left = left
+        current_right = right
         mid = (left + right) // 2
 
         if arr[mid] == targetVal:
+            if trace is not None:
+                trace.append(
+                    {
+                        "Step": len(trace) + 1,
+                        "Active range": f"{current_left}–{current_right}",
+                        "Midpoint index": mid,
+                        "Midpoint value": arr[mid],
+                        "Decision": f"{arr[mid]} = {targetVal}: found",
+                        "Next range": "Found",
+                    }
+                )
             return mid
-        
+
         if arr[mid] < targetVal:
             left = mid + 1
+            decision = f"{arr[mid]} < {targetVal}: discard left half"
         else:
             right = mid - 1
+            decision = f"{arr[mid]} > {targetVal}: discard right half"
+
+        if trace is not None:
+            next_range = f"{left}–{right}" if left <= right else "Empty"
+            trace.append(
+                {
+                    "Step": len(trace) + 1,
+                    "Active range": f"{current_left}–{current_right}",
+                    "Midpoint index": mid,
+                    "Midpoint value": arr[mid],
+                    "Decision": decision,
+                    "Next range": next_range,
+                }
+            )
 
     return -1
 

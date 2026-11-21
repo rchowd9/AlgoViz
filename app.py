@@ -253,12 +253,16 @@ with array_search_tab:
         try:
             values = [int(value.strip()) for value in array_text.split(",") if value.strip()]
             target = int(target_text.strip())
-            index = search_array(values, target, array_search_algorithm)
+            search_trace = []
+            index = search_array(
+                values, target, array_search_algorithm, trace=search_trace
+            )
             st.session_state["array_search_result"] = {
                 "values": values,
                 "target": target,
                 "index": index,
                 "algorithm": array_search_algorithm,
+                "trace": search_trace,
             }
         except ValueError as error:
             st.error(f"Could not run search: {error}")
@@ -269,6 +273,17 @@ with array_search_tab:
             st.success(f"Found {array_result['target']} at index {array_result['index']}.")
         else:
             st.info(f"{array_result['target']} was not found.")
+        if array_result["algorithm"] == "Binary search":
+            st.write("**Binary search steps**")
+            st.caption(
+                "At each step, compare the target with the midpoint and keep only the half "
+                "that could still contain the target."
+            )
+            st.dataframe(
+                array_result["trace"],
+                hide_index=True,
+                use_container_width=True,
+            )
         st.dataframe(
             [
                 {"Index": index, "Value": value, "Match": value == array_result["target"]}

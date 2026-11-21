@@ -142,6 +142,26 @@ class AlgorithmTraceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "requires the input sequence to be sorted"):
             search_array([3, 1, 2], 2, "Binary search")
 
+    def test_binary_search_trace_records_midpoints_and_discarded_ranges(self):
+        trace = []
+
+        index = search_array(
+            [1, 50, 200, 300, 5000, 20000, 30000],
+            50,
+            "Binary search",
+            trace=trace,
+        )
+
+        self.assertEqual(index, 1)
+        self.assertEqual(
+            [
+                (step["Active range"], step["Midpoint index"], step["Next range"])
+                for step in trace
+            ],
+            [("0–6", 3, "0–2"), ("0–2", 1, "Found")],
+        )
+        self.assertIn("300 > 50", trace[0]["Decision"])
+
     def test_hill_climbing_reaches_peak(self):
         self.assertEqual(hill_climb_trace(-8)[-1], 3)
 

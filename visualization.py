@@ -170,7 +170,7 @@ def search_graph(graph, start, goal, algorithm, heuristic=None, max_depth=20):
     return _uninformed_search(graph, start, goal, algorithm)
 
 
-def search_array(values, target, algorithm):
+def search_array(values, target, algorithm, trace=None):
     if algorithm not in ARRAY_SEARCH_ALGORITHMS:
         raise ValueError(f"Unknown array search algorithm: {algorithm}.")
     if not values:
@@ -184,6 +184,8 @@ def search_array(values, target, algorithm):
         "Ternary search": ternarySearch,
         "Fibonacci search": fibonacciSearch,
     }
+    if algorithm == "Binary search":
+        return binarySearch(values, target, trace=trace)
     return search_functions[algorithm](values, target)
 
 
