@@ -4,6 +4,7 @@ from api import app as flask_app
 from algorithms import trainDecisionTreeClassifier
 from visualization import (
     ARRAY_SEARCH_ALGORITHMS,
+    decision_tree_gini_details,
     decision_tree_source,
     parse_graph,
     search_array,
@@ -100,6 +101,19 @@ class AlgorithmTraceTests(unittest.TestCase):
         self.assertIn("x", source)
         self.assertIn("red", source)
         self.assertIn("blue", source)
+
+    def test_decision_tree_gini_details_show_node_formula_and_split_gain(self):
+        classifier = trainDecisionTreeClassifier(
+            [[1, 1], [2, 1], [2, 1], [4, 4], [5, 4]],
+            ["red", "red", "blue", "blue", "blue"],
+            max_depth=2,
+        )
+
+        details = decision_tree_gini_details(classifier)
+
+        self.assertEqual(details[0]["Gini calculation"], "1 - (3/5)² - (2/5)² = 0.480")
+        self.assertEqual(details[0]["Weighted child Gini"], 0.267)
+        self.assertEqual(details[0]["Gini gain"], 0.213)
 
     def test_sorting_traces_end_with_sorted_values(self):
         for algorithm in (

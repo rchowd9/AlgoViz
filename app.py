@@ -19,6 +19,7 @@ from algorithms import (
 from visualization import (
     ARRAY_SEARCH_ALGORITHMS,
     SEARCH_ALGORITHMS,
+    decision_tree_gini_details,
     decision_tree_source,
     hill_climb_trace,
     parse_graph,
@@ -197,6 +198,39 @@ with search_tab:
             "**Path:**",
             " → ".join(result["path"]) if result["path"] else "No path found within the search limits.",
         )
+        if result["path"]:
+            st.write("**How path cost is calculated**")
+            st.caption(
+                "Start at 0, then add each traversed edge cost to the previous cumulative cost."
+            )
+            path_cost_rows = [
+                {
+                    "Step": 0,
+                    "From": "—",
+                    "To": result["path"][0],
+                    "Edge cost": "—",
+                    "Calculation": "0 (starting cost)",
+                    "Cumulative cost": 0,
+                }
+            ]
+            cumulative_cost = 0
+            for step_number, (source, destination) in enumerate(
+                zip(result["path"], result["path"][1:]), start=1
+            ):
+                edge_cost = weighted_graph[source][destination]
+                next_cost = cumulative_cost + edge_cost
+                path_cost_rows.append(
+                    {
+                        "Step": step_number,
+                        "From": source,
+                        "To": destination,
+                        "Edge cost": edge_cost,
+                        "Calculation": f"{cumulative_cost} + {edge_cost} = {next_cost}",
+                        "Cumulative cost": next_cost,
+                    }
+                )
+                cumulative_cost = next_cost
+            st.dataframe(path_cost_rows, hide_index=True, use_container_width=True)
         st.caption(
             "Green marks the start, red the goal, blue expanded nodes, orange route nodes, "
             "and green edges the final route."
@@ -536,7 +570,7 @@ with more_algorithms_tab:
         with st.form("decision-tree-controls"):
             tree_training_text = st.text_area(
                 "Training rows (x, y, label)",
-                "1, 1, red\n2, 1, red\n4, 4, blue\n5, 4, blue",
+                "1, 1, red\n2, 1, red\n2, 1, blue\n4, 4, blue\n5, 4, blue",
                 help="Enter one point and label per line, separated by commas.",
             )
             tree_max_depth = st.number_input(
@@ -592,6 +626,17 @@ with more_algorithms_tab:
             second.metric("Leaf nodes", tree_result["leaves"])
             third.metric("Training accuracy", f"{tree_result['accuracy']:.1%}")
             st.graphviz_chart(tree_result["source"], width="stretch")
+            st.write("**Gini impurity calculations**")
+            st.caption(
+                "Gini = 1 − Σ(class count ÷ samples)². "
+                "At a split, weighted child Gini is the children’s Gini weighted by their sample counts; "
+                "Gini gain = parent Gini − weighted child Gini."
+            )
+            st.dataframe(
+                decision_tree_gini_details(classifier),
+                hide_index=True,
+                use_container_width=True,
+            )
         else:
             st.info("Enter labeled points and train the classifier to visualize its decision tree.")
 

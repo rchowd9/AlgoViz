@@ -38,6 +38,56 @@ def decision_tree_source(classifier, feature_names):
     )
 
 
+def decision_tree_gini_details(classifier):
+    tree = classifier.tree_
+    classes = [str(label) for label in classifier.classes_]
+    details = []
+
+    def visit(node_id, path):
+        sample_count = int(tree.n_node_samples[node_id])
+        values = tree.value[node_id][0]
+        value_total = sum(values)
+        class_counts = [
+            int(round(value / value_total * sample_count)) if value_total else 0
+            for value in values
+        ]
+        gini = 1 - sum((count / sample_count) ** 2 for count in class_counts)
+        terms = " - ".join(
+            f"({count}/{sample_count})²" for count in class_counts if count
+        )
+        item = {
+            "Node": path,
+            "Samples": sample_count,
+            "Class counts": ", ".join(
+                f"{label}: {count}" for label, count in zip(classes, class_counts)
+            ),
+            "Gini calculation": f"1 - {terms} = {gini:.3f}" if terms else "1",
+            "Gini": round(gini, 3),
+            "Weighted child Gini": "—",
+            "Gini gain": "—",
+        }
+
+        left_child = tree.children_left[node_id]
+        right_child = tree.children_right[node_id]
+        details.append(item)
+        if left_child != right_child:
+            left_count = int(tree.n_node_samples[left_child])
+            right_count = int(tree.n_node_samples[right_child])
+            left_gini = tree.impurity[left_child]
+            right_gini = tree.impurity[right_child]
+            weighted_child_gini = (
+                left_count / sample_count * left_gini
+                + right_count / sample_count * right_gini
+            )
+            item["Weighted child Gini"] = round(weighted_child_gini, 3)
+            item["Gini gain"] = round(gini - weighted_child_gini, 3)
+            visit(left_child, f"{path} → Left")
+            visit(right_child, f"{path} → Right")
+
+    visit(0, "Root")
+    return details
+
+
 def parse_graph(graph_data):
     if isinstance(graph_data, str):
         try:
