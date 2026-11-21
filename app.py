@@ -284,11 +284,26 @@ with array_search_tab:
                 hide_index=True,
                 use_container_width=True,
             )
-        st.dataframe(
-            [
+            probe_steps = {
+                step["Midpoint index"]: step["Step"]
+                for step in array_result["trace"]
+            }
+            array_rows = [
+                {
+                    "Index": index,
+                    "Value": value,
+                    "Probe step": probe_steps.get(index, "Not probed"),
+                    "Match": value == array_result["target"],
+                }
+                for index, value in enumerate(array_result["values"])
+            ]
+        else:
+            array_rows = [
                 {"Index": index, "Value": value, "Match": value == array_result["target"]}
                 for index, value in enumerate(array_result["values"])
-            ],
+            ]
+        st.dataframe(
+            array_rows,
             hide_index=True,
             use_container_width=True,
         )
