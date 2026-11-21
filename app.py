@@ -615,6 +615,7 @@ with more_algorithms_tab:
                     "depth": classifier.get_depth(),
                     "leaves": classifier.get_n_leaves(),
                     "accuracy": classifier.score(training_features, training_labels),
+                    "gini_details": decision_tree_gini_details(classifier),
                 }
             except ValueError as error:
                 st.error(f"Could not train decision tree: {error}")
@@ -633,7 +634,7 @@ with more_algorithms_tab:
                 "Gini gain = parent Gini − weighted child Gini."
             )
             st.dataframe(
-                decision_tree_gini_details(classifier),
+                tree_result["gini_details"],
                 hide_index=True,
                 use_container_width=True,
             )
