@@ -688,7 +688,7 @@ class DecisionTree:
 
     def fit(self, X, y):
         rows, labels = _validated_training_data(X, y)
-        self.classes_ = list(dict.fromkeys(labels))
+        self.classes_ = sorted(set(labels), key=str)
 
         def build(indices, depth):
             counts = {}
@@ -1518,124 +1518,214 @@ class LinearSVM:
         approx = np.dot(X, self.w) + self.b
         return np.sign(approx)
 
-import numpy as np
-from scipy.spatial.distance import cdist
-
 def kmeans(X, k, max_iterations=100, tolerance=1e-8):
     """
-    K-Means clustering from scratch using NumPy.
-    
-    Parameters:
-    - X: numpy array of shape (n_samples, n_features)
-    - k: number of clusters
-    - max_iterations: maximum number of iterations
-    - tolerance: stop when centroid shift < tolerance
-    
-    Returns:
-    - labels: cluster labels for each point
-    - centroids: final centroids
+    Cluster rows of X with Lloyd's k-means algorithm.
     """
-    # Step 1: Randomly initialize centroids
-    centroids = X[np.random.choice(len(X), k, replace=False)].copy()
-    
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2 or X.shape[0] == 0 or X.shape[1] == 0:
+        raise ValueError("X must be a non-empty two-dimensional array.")
+    if not np.all(np.isfinite(X)):
+        raise ValueError("X must contain only finite numbers.")
+    if isinstance(k, bool) or not isinstance(k, int) or not 1 <= k <= len(X):
+        raise ValueError("k must be an integer between 1 and the number of samples.")
+    if isinstance(max_iterations, bool) or not isinstance(max_iterations, int) or max_iterations < 1:
+        raise ValueError("max_iterations must be a positive integer.")
+    if not isinstance(tolerance, numbers.Real) or isinstance(tolerance, bool) or tolerance < 0:
+        raise ValueError("tolerance must be a non-negative number.")
+
+    centroids = X[random.sample(range(len(X)), k)].copy()
+    labels = np.zeros(len(X), dtype=int)
     for _ in range(max_iterations):
-        # Step 2: Compute distances from each point to all centroids
-        distances = cdist(X, centroids, metric='euclidean')
-        
-        # Step 3: Assign each point to nearest centroid
-        labels = np.array([np.argmin(distances[i]) for i in range(len(X))])
-        
-        # Step 4: Update centroids as mean of assigned points
-        new_centroids = np.vstack([
-            X[(labels == cluster_idx).nonzero()[0]].mean(axis=0)
-            for cluster_idx in range(k)
-        ])
-        
-        # Check convergence
-        if np.linalg.norm(new_centroids - centroids) <= tolerance:
-            centroids = new_centroids
+        distances = np.sum((X[:, None, :] - centroids[None, :, :]) ** 2, axis=2)
+        new_labels = np.argmin(distances, axis=1)
+        new_centroids = centroids.copy()
+        for cluster in range(k):
+            members = X[new_labels == cluster]
+            if len(members):
+                new_centroids[cluster] = members.mean(axis=0)
+            else:
+                # Re-seed empty clusters at a point far from its assigned centroid.
+                errors = distances[np.arange(len(X)), new_labels]
+                new_centroids[cluster] = X[int(np.argmax(errors))]
+        converged = np.array_equal(labels, new_labels) and np.allclose(
+            centroids, new_centroids, atol=tolerance, rtol=0
+        )
+        labels, centroids = new_labels, new_centroids
+        if converged:
             break
-        
-        centroids = new_centroids
-    
     return labels, centroids
 
-# Example usage:
-if __name__ == "__main__":
-    # Sample data
-    X = np.array([
-        [0.0, 0.0], [0.0, 1.0], [1.0, 0.0],
-        [8.0, 8.0], [8.0, 9.0], [9.0, 8.0]
-    ])
-    
-    labels, centroids = kmeans(X, k=2)
-    
-    print("Centroids:\n", centroids)
-    print("Labels:\n", labels)
-
-
-import numpy as np
-
 def euclidean_distance(p1, p2):
-    return np.linalg.norm(p1 - p2)
+    first = np.asarray(p1, dtype=float)
+    second = np.asarray(p2, dtype=float)
+    if first.shape != second.shape:
+        raise ValueError("Points must have matching dimensions.")
+    return float(np.linalg.norm(first - second))
 
 def merge_clusters(distance_matrix, labels):
-    # Find smallest distance > 0
-    idx = np.triu_indices(len(distance_matrix), k=1)
-    min_val = np.min(distance_matrix[idx])
-    row, col = np.where(distance_matrix == min_val)
-    # Merge clusters
-    labels[labels == col] = row
-    labels[labels > col] -= 1
-    # Remove merged cluster from matrix
-    dist = np.delete(distance_matrix, col, axis=0)
-    dist = np.delete(dist, col, axis=1)
-    return dist, labels
+    distances = np.asarray(distance_matrix, dtype=float)
+    merged_labels = np.asarray(labels).copy()
+    if distances.ndim != 2 or distances.shape[0] != distances.shape[1]:
+        raise ValueError("Distance matrix must be square.")
+    if len(merged_labels) != len(distances) or len(distances) < 2:
+        raise ValueError("At least two matching clusters are required.")
+    upper = np.triu_indices(len(distances), k=1)
+    row, col = min(
+        zip(upper[0], upper[1]),
+        key=lambda pair: distances[pair[0], pair[1]],
+    )
+    merged_labels[merged_labels == merged_labels[col]] = merged_labels[row]
+    reduced = np.delete(np.delete(distances, col, axis=0), col, axis=1)
+    return reduced, merged_labels
 
-def agglomerative_clustering(X, method='average'):
-    n = X.shape[0]
-    # Initialize distance matrix
-    D = np.zeros((n, n))
-    for i in range(n):
-        for j in range(i+1, n):
-            D[i, j] = euclidean_distance(X[i], X[j])
-            D[j, i] = D[i, j]
-    labels = np.arange(n)
+
+def agglomerative_clustering(X, method="average", n_clusters=1):
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2 or not len(X) or not X.shape[1]:
+        raise ValueError("X must be a non-empty two-dimensional array.")
+    if not np.all(np.isfinite(X)):
+        raise ValueError("X must contain only finite numbers.")
+    if method not in {"single", "complete", "average"}:
+        raise ValueError("method must be 'single', 'complete', or 'average'.")
+    if isinstance(n_clusters, bool) or not isinstance(n_clusters, int) or not 1 <= n_clusters <= len(X):
+        raise ValueError("n_clusters must be between 1 and the number of samples.")
+
+    point_distances = np.linalg.norm(X[:, None, :] - X[None, :, :], axis=2)
+    clusters = {index: [index] for index in range(len(X))}
+    active = list(clusters)
     merges = []
-    step = 1
-    while step < n:
-        # Find closest clusters
-        idx = np.triu_indices(len(D), k=1)
-        min_val = np.min(D[idx])
-        row, col = np.where(D == min_val)
-        # Merge
-        labels[labels == col] = row
-        labels[labels > col] -= 1
-        merges.append((row, col, min_val))
-        # Remove merged cluster
-        D = np.delete(D, col, axis=0)
-        D = np.delete(D, col, axis=1)
-        step += 1
+    next_id = len(X)
+    while len(active) > n_clusters:
+        pair = None
+        pair_distance = math.inf
+        for i, first_id in enumerate(active):
+            for second_id in active[i + 1:]:
+                distances = [
+                    point_distances[first, second]
+                    for first in clusters[first_id]
+                    for second in clusters[second_id]
+                ]
+                distance = (
+                    min(distances) if method == "single"
+                    else max(distances) if method == "complete"
+                    else sum(distances) / len(distances)
+                )
+                if distance < pair_distance:
+                    pair, pair_distance = (first_id, second_id), distance
+        first_id, second_id = pair
+        merges.append((first_id, second_id, float(pair_distance)))
+        clusters[next_id] = clusters.pop(first_id) + clusters.pop(second_id)
+        active = [cluster_id for cluster_id in active if cluster_id not in pair]
+        active.append(next_id)
+        next_id += 1
+
+    labels = np.empty(len(X), dtype=int)
+    for label, cluster_id in enumerate(active):
+        labels[clusters[cluster_id]] = label
     return labels, merges
 
-# Example data
-X = np.array([[4, 5], [10, 4], [3, 11], [14, 6], [6, 10], [12, 21]])
-labels, merges = agglomerative_clustering(X, method='average')
-print("Cluster labels:", labels)
-print("Merges:", merges)
 
-# Optional: visualize dendrogram (simplified)
-x, y = X[:, 0], X[:, 1]
-plt.scatter(x, y, c=labels, s=50, cmap='viridis')
-plt.show()
+def agglomartiveClustering(X, n_clusters=1, method="average"):
+    """Compatibility spelling for agglomerative clustering."""
+    return agglomerative_clustering(X, method=method, n_clusters=n_clusters)
 
 
+def divisive_clustering(X, n_clusters=2, max_iterations=100, tolerance=1e-8):
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2 or not len(X) or not X.shape[1]:
+        raise ValueError("X must be a non-empty two-dimensional array.")
+    if isinstance(n_clusters, bool) or not isinstance(n_clusters, int) or not 1 <= n_clusters <= len(X):
+        raise ValueError("n_clusters must be between 1 and the number of samples.")
+    clusters = [list(range(len(X)))]
+    while len(clusters) < n_clusters:
+        splittable = [
+            (float(np.sum(np.var(X[indices], axis=0))), index)
+            for index, indices in enumerate(clusters)
+            if len(indices) > 1
+        ]
+        if not splittable:
+            break
+        _, cluster_index = max(splittable)
+        indices = clusters.pop(cluster_index)
+        points = X[indices]
+        centers = points[[int(np.argmax(np.linalg.norm(points - points.mean(axis=0), axis=1))), 0]]
+        if np.array_equal(centers[0], centers[1]):
+            centers[1] = points[-1]
+        local_labels = np.zeros(len(points), dtype=int)
+        for _ in range(max_iterations):
+            distances = np.sum((points[:, None, :] - centers[None, :, :]) ** 2, axis=2)
+            updated_labels = np.argmin(distances, axis=1)
+            updated_centers = centers.copy()
+            for label in (0, 1):
+                members = points[updated_labels == label]
+                if len(members):
+                    updated_centers[label] = members.mean(axis=0)
+            if np.array_equal(local_labels, updated_labels) and np.allclose(
+                centers, updated_centers, atol=tolerance, rtol=0
+            ):
+                local_labels = updated_labels
+                centers = updated_centers
+                break
+            local_labels, centers = updated_labels, updated_centers
+        left = [indices[index] for index in range(len(indices)) if local_labels[index] == 0]
+        right = [indices[index] for index in range(len(indices)) if local_labels[index] == 1]
+        if not left or not right:
+            left, right = indices[:len(indices) // 2], indices[len(indices) // 2:]
+        clusters.extend((left, right))
+    result = np.empty(len(X), dtype=int)
+    for label, indices in enumerate(clusters):
+        result[indices] = label
+    return result
 
-def agglomartiveClustering():
 
-def DivisiveClustering():
+def DivisiveClustering(X, n_clusters=2, max_iterations=100, tolerance=1e-8):
+    """Compatibility spelling for divisive clustering."""
+    return divisive_clustering(X, n_clusters, max_iterations, tolerance)
 
-def DBSCAN():
+
+def DBSCAN(X, eps=0.5, min_samples=5):
+    """Density-based clustering; noise samples receive label -1."""
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2 or not len(X) or not X.shape[1]:
+        raise ValueError("X must be a non-empty two-dimensional array.")
+    if not np.all(np.isfinite(X)):
+        raise ValueError("X must contain only finite numbers.")
+    if isinstance(eps, bool) or not isinstance(eps, numbers.Real) or not math.isfinite(eps) or eps <= 0:
+        raise ValueError("eps must be a positive finite number.")
+    if isinstance(min_samples, bool) or not isinstance(min_samples, int) or min_samples < 1:
+        raise ValueError("min_samples must be a positive integer.")
+
+    distances = np.linalg.norm(X[:, None, :] - X[None, :, :], axis=2)
+    neighbors = [np.flatnonzero(distances[index] <= eps).tolist() for index in range(len(X))]
+    labels = np.full(len(X), -1, dtype=int)
+    visited = np.zeros(len(X), dtype=bool)
+    cluster = 0
+    for point in range(len(X)):
+        if visited[point]:
+            continue
+        visited[point] = True
+        if len(neighbors[point]) < min_samples:
+            continue
+        labels[point] = cluster
+        seeds = list(neighbors[point])
+        queued = set(seeds)
+        cursor = 0
+        while cursor < len(seeds):
+            candidate = seeds[cursor]
+            cursor += 1
+            if not visited[candidate]:
+                visited[candidate] = True
+                if len(neighbors[candidate]) >= min_samples:
+                    for neighbor in neighbors[candidate]:
+                        if neighbor not in queued:
+                            queued.add(neighbor)
+                            seeds.append(neighbor)
+            if labels[candidate] == -1:
+                labels[candidate] = cluster
+        cluster += 1
+    return labels
+
 
 def affinity_propagation(S, max_iter=200, damping=0.5, convergence_iter=15):
     """
@@ -1651,88 +1741,109 @@ def affinity_propagation(S, max_iter=200, damping=0.5, convergence_iter=15):
         cluster_centers_indices (list): Indices of cluster centers.
         labels (ndarray): Cluster label for each point.
     """
-    N = S.shape[0]
-    # Responsibility matrix
-    R = np.zeros((N, N))
-    # Availability matrix
-    A = np.zeros((N, N))
-    
-    # Track convergence
-    exemplars_history = []
-    
-    for iteration in range(max_iter):
-        # Update responsibilities
-        for i in range(N):
-            for k in range(N):
-                # Max over all other k' except k
-                max_val = np.max(A[i, :] + S[i, :])
-                max_val2 = np.max(np.delete(A[i, :] + S[i, :], k))
-                R[i, k] = damping * R[i, k] + (1 - damping) * (S[i, k] - max_val2)
-        
-        # Update availabilities
-        for k in range(N):
-            for i in range(N):
-                if i == k:
-                    A[k, k] = damping * A[k, k] + (1 - damping) * np.sum(np.maximum(R[:, k], 0) - np.maximum(R[k, k], 0))
-                else:
-                    A[i, k] = damping * A[i, k] + (1 - damping) * min(0, R[k, k] + np.sum(np.maximum(R[np.arange(N) != i, k], 0)))
-        
-        # Check convergence
-        E = (A + R) > 0
-        exemplars = np.where(np.diag(E))[0]
-        exemplars_history.append(exemplars)
-        
-        if iteration >= convergence_iter:
-            if np.all(exemplars_history[-convergence_iter] == exemplars):
-                break
-    
-    # Assign labels
-    if len(exemplars) == 0:
-        labels = np.zeros(N, dtype=int)
-        cluster_centers_indices = []
-    else:
-        labels = np.array([exemplars[np.argmax(S[i, exemplars])] for i in range(N)])
-        cluster_centers_indices = exemplars.tolist()
-    
-    return cluster_centers_indices, labels
+    similarities = np.asarray(S, dtype=float).copy()
+    if similarities.ndim != 2 or similarities.shape[0] != similarities.shape[1] or not len(similarities):
+        raise ValueError("S must be a non-empty square similarity matrix.")
+    if not np.all(np.isfinite(similarities)):
+        raise ValueError("S must contain only finite numbers.")
+    if isinstance(max_iter, bool) or not isinstance(max_iter, int) or max_iter < 1:
+        raise ValueError("max_iter must be a positive integer.")
+    if (
+        isinstance(damping, bool) or not isinstance(damping, numbers.Real)
+        or not math.isfinite(damping) or not 0 <= damping < 1
+    ):
+        raise ValueError("damping must be a number in [0, 1).")
+    if isinstance(convergence_iter, bool) or not isinstance(convergence_iter, int) or convergence_iter < 1:
+        raise ValueError("convergence_iter must be a positive integer.")
+
+    size = len(similarities)
+    responsibilities = np.zeros_like(similarities)
+    availabilities = np.zeros_like(similarities)
+    history = []
+    for _ in range(max_iter):
+        values = availabilities + similarities
+        best_indices = np.argmax(values, axis=1)
+        best_values = values[np.arange(size), best_indices]
+        second_values = np.partition(values, -2, axis=1)[:, -2] if size > 1 else best_values
+        competing = np.broadcast_to(second_values[:, None], values.shape).copy()
+        competing[np.arange(size), best_indices] = best_values
+        updated_responsibilities = similarities - competing
+        responsibilities = damping * responsibilities + (1 - damping) * updated_responsibilities
+
+        positive = np.maximum(responsibilities, 0)
+        column_sums = positive.sum(axis=0) - np.diag(positive)
+        updated_availabilities = np.minimum(
+            0,
+            responsibilities.diagonal()[None, :] + column_sums[None, :] - positive,
+        )
+        np.fill_diagonal(updated_availabilities, column_sums)
+        availabilities = damping * availabilities + (1 - damping) * updated_availabilities
+
+        exemplars = np.diag(availabilities + responsibilities) > 0
+        history.append(exemplars.copy())
+        if len(history) >= convergence_iter and all(
+            np.array_equal(previous, history[-1])
+            for previous in history[-convergence_iter:]
+        ) and np.any(exemplars):
+            break
+
+    centers = np.flatnonzero(exemplars)
+    if not len(centers):
+        centers = np.asarray([int(np.argmax(np.diag(similarities)))])
+    labels = np.asarray(
+        [centers[np.argmax(similarities[index, centers])] for index in range(size)],
+        dtype=int,
+    )
+    return centers.tolist(), labels
 
 
 class MeanShift:
-    def __init__(self, radius=4, max_iter=10):
+    def __init__(self, radius=4, max_iter=10, tolerance=1e-3):
         self.radius = radius
         self.max_iter = max_iter
+        self.tolerance = tolerance
+        self.cluster_centers_ = None
+        self.labels_ = None
 
     def fit(self, data):
-        centroids = {i: data[i].copy() for i in range(len(data))}
-        for _ in range(self.max_iter):
-            new_centroids = []
-            for c in centroids.values():
-                neighbors = [
-                    x for x in data
-                    if np.linalg.norm(x - c) < self.radius
-                ]
-                if neighbors:
-                    new_c = np.mean(neighbors, axis=0)
-                    new_centroids.append(new_c)
-                else:
-                    new_centroids.append(c)
-            centroids = {i: np.array(new_centroids[i]) for i in range(len(new_centroids))}
-            if np.allclose(list(centroids.values()), list(centroids.values())[:-1], equal_nan=True):
-                break
-        return centroids
+        X = np.asarray(data, dtype=float)
+        if X.ndim != 2 or not len(X) or not X.shape[1]:
+            raise ValueError("data must be a non-empty two-dimensional array.")
+        if not np.all(np.isfinite(X)):
+            raise ValueError("data must contain only finite numbers.")
+        if isinstance(self.radius, bool) or not isinstance(self.radius, numbers.Real) or self.radius <= 0:
+            raise ValueError("radius must be a positive number.")
+        if isinstance(self.max_iter, bool) or not isinstance(self.max_iter, int) or self.max_iter < 1:
+            raise ValueError("max_iter must be a positive integer.")
+        if not isinstance(self.tolerance, numbers.Real) or self.tolerance < 0:
+            raise ValueError("tolerance must be non-negative.")
 
-# Example usage
-np.random.seed(0)
-X = np.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8], [1, 0.6],
-              [9, 11], [8, 2], [10, 2], [9, 3]])
+        modes = []
+        for point in X:
+            center = point.copy()
+            for _ in range(self.max_iter):
+                neighbors = X[np.linalg.norm(X - center, axis=1) <= self.radius]
+                shifted = neighbors.mean(axis=0)
+                if np.linalg.norm(shifted - center) <= self.tolerance:
+                    center = shifted
+                    break
+                center = shifted
+            modes.append(center)
 
-ms = MeanShift(radius=2.5, max_iter=20)
-centers = ms.fit(X)
+        centers = []
+        for mode in modes:
+            if not any(np.linalg.norm(mode - center) <= self.radius / 2 for center in centers):
+                centers.append(mode)
+        self.cluster_centers_ = np.asarray(centers)
+        distances = np.linalg.norm(X[:, None, :] - self.cluster_centers_[None, :, :], axis=2)
+        self.labels_ = np.argmin(distances, axis=1)
+        return {index: center.copy() for index, center in enumerate(self.cluster_centers_)}
 
-print("Cluster centers:\n", centers)
-
-# Optional: plot
-plt.scatter(X[:,0], X[:,1], s=150)
-for c in centers:
-    plt.scatter(c[0], c[1], s=100, marker='x')
-plt.show()
+    def predict(self, data):
+        if self.cluster_centers_ is None:
+            raise ValueError("MeanShift must be fitted before prediction.")
+        X = np.asarray(data, dtype=float)
+        if X.ndim != 2 or X.shape[1] != self.cluster_centers_.shape[1]:
+            raise ValueError("data must have the same number of features used during fitting.")
+        distances = np.linalg.norm(X[:, None, :] - self.cluster_centers_[None, :, :], axis=2)
+        return np.argmin(distances, axis=1)
