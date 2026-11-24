@@ -1492,7 +1492,62 @@ if __name__ == "__main__":
     print("Labels:\n", labels)
 
 
-def hierarchialClustering():
+import numpy as np
+import matplotlib.pyplot as plt
+
+def euclidean_distance(p1, p2):
+    return np.linalg.norm(p1 - p2)
+
+def merge_clusters(distance_matrix, labels):
+    # Find smallest distance > 0
+    idx = np.triu_indices(len(distance_matrix), k=1)
+    min_val = np.min(distance_matrix[idx])
+    row, col = np.where(distance_matrix == min_val)
+    # Merge clusters
+    labels[labels == col] = row
+    labels[labels > col] -= 1
+    # Remove merged cluster from matrix
+    dist = np.delete(distance_matrix, col, axis=0)
+    dist = np.delete(dist, col, axis=1)
+    return dist, labels
+
+def agglomerative_clustering(X, method='average'):
+    n = X.shape[0]
+    # Initialize distance matrix
+    D = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i+1, n):
+            D[i, j] = euclidean_distance(X[i], X[j])
+            D[j, i] = D[i, j]
+    labels = np.arange(n)
+    merges = []
+    step = 1
+    while step < n:
+        # Find closest clusters
+        idx = np.triu_indices(len(D), k=1)
+        min_val = np.min(D[idx])
+        row, col = np.where(D == min_val)
+        # Merge
+        labels[labels == col] = row
+        labels[labels > col] -= 1
+        merges.append((row, col, min_val))
+        # Remove merged cluster
+        D = np.delete(D, col, axis=0)
+        D = np.delete(D, col, axis=1)
+        step += 1
+    return labels, merges
+
+# Example data
+X = np.array([[4, 5], [10, 4], [3, 11], [14, 6], [6, 10], [12, 21]])
+labels, merges = agglomerative_clustering(X, method='average')
+print("Cluster labels:", labels)
+print("Merges:", merges)
+
+# Optional: visualize dendrogram (simplified)
+x, y = X[:, 0], X[:, 1]
+plt.scatter(x, y, c=labels, s=50, cmap='viridis')
+plt.show()
+
 
 def clustering():
 
