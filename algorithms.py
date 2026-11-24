@@ -1441,3 +1441,7 @@ def kMeansClustering():
 def hierarchialClustering():
 
 def clustering():
+
+def agglomartiveClustering():
+
+def DivisiveClustering():
