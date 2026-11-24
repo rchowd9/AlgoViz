@@ -913,6 +913,8 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
 
         for _ in range(iterations):
             gradient = gradient_function(point)
+            if isinstance(gradient, (list, tuple)) and len(gradient) == 1:
+                gradient = gradient[0]
             if (
                 isinstance(gradient, bool)
                 or not isinstance(gradient, (int, float))

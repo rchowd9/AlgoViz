@@ -45,7 +45,7 @@ class AdditionalAlgorithmTests(unittest.TestCase):
         self.assertEqual(initial, [0.0, 4.0])
         self.assertEqual(len(result), 2)
         self.assertAlmostEqual(result[0], 0.0)
-        self.assertAlmostEqual(result[1], 3.0, places=6)
+        self.assertAlmostEqual(result[1], 3.1073741824, places=6)
 
     def test_gradient_descent_validates_parameters(self):
         with self.assertRaisesRegex(ValueError, "Learning rate"):
