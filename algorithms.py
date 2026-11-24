@@ -1604,11 +1604,188 @@ def agglomerative_clustering(X, method='average'):
 
 
 
-def agglomartiveClustering():
+def _validate_cluster_input(X):
+    X = np.asarray(X, dtype=float)
+    if X.ndim != 2 or not len(X) or not X.shape[1]:
+        raise ValueError("X must be a non-empty two-dimensional array.")
+    if not np.all(np.isfinite(X)):
+        raise ValueError("X must contain only finite numbers.")
+    return X
 
-def DivisiveClustering():
 
-def DBSCAN():
+def _validate_n_clusters(n_clusters, n_samples):
+    if isinstance(n_clusters, bool) or not isinstance(n_clusters, int) or not 1 <= n_clusters <= n_samples:
+        raise ValueError("n_clusters must be an integer between 1 and the number of samples.")
+
+
+def agglomartiveClustering(X, n_clusters=1, method="average"):
+    """
+    Bottom-up hierarchical clustering.
+
+    Every point starts as its own cluster; the two closest clusters are merged
+    repeatedly until n_clusters remain.
+
+    Parameters:
+    - X: Array of shape (n_samples, n_features).
+    - n_clusters: Number of clusters to stop at.
+    - method: Linkage — 'single' (min), 'complete' (max) or 'average' distance.
+
+    Returns:
+    - labels: Cluster index (0..n_clusters-1) for each sample.
+    - merges: List of (cluster_a, cluster_b, distance) in merge order. Original
+      points are ids 0..n-1; the cluster created by merge i gets id n + i.
+    """
+    X = _validate_cluster_input(X)
+    _validate_n_clusters(n_clusters, len(X))
+    if method not in {"single", "complete", "average"}:
+        raise ValueError("method must be 'single', 'complete', or 'average'.")
+
+    point_distances = np.linalg.norm(X[:, None, :] - X[None, :, :], axis=2)
+    clusters = {index: [index] for index in range(len(X))}
+    merges = []
+    next_id = len(X)
+
+    while len(clusters) > n_clusters:
+        ids = list(clusters)
+        best_pair, best_distance = None, math.inf
+        for i, first_id in enumerate(ids):
+            for second_id in ids[i + 1:]:
+                block = point_distances[np.ix_(clusters[first_id], clusters[second_id])]
+                if method == "single":
+                    distance = block.min()
+                elif method == "complete":
+                    distance = block.max()
+                else:
+                    distance = block.mean()
+                if distance < best_distance:
+                    best_pair, best_distance = (first_id, second_id), distance
+        first_id, second_id = best_pair
+        clusters[next_id] = clusters.pop(first_id) + clusters.pop(second_id)
+        merges.append((first_id, second_id, float(best_distance)))
+        next_id += 1
+
+    labels = np.empty(len(X), dtype=int)
+    for label, members in enumerate(clusters.values()):
+        labels[members] = label
+    return labels, merges
+
+
+def DivisiveClustering(X, n_clusters=2, max_iterations=100, tolerance=1e-8):
+    """
+    Top-down hierarchical clustering (bisecting 2-means).
+
+    All points start in one cluster; the cluster with the largest spread is
+    repeatedly split in two with 2-means until n_clusters exist.
+
+    Parameters:
+    - X: Array of shape (n_samples, n_features).
+    - n_clusters: Number of clusters to produce.
+    - max_iterations: Max 2-means iterations per split.
+    - tolerance: Centroid movement below which a split is considered converged.
+
+    Returns:
+    - labels: Cluster index for each sample.
+    """
+    X = _validate_cluster_input(X)
+    _validate_n_clusters(n_clusters, len(X))
+    if isinstance(max_iterations, bool) or not isinstance(max_iterations, int) or max_iterations < 1:
+        raise ValueError("max_iterations must be a positive integer.")
+    if isinstance(tolerance, bool) or not isinstance(tolerance, numbers.Real) or tolerance < 0:
+        raise ValueError("tolerance must be a non-negative number.")
+
+    clusters = [np.arange(len(X))]
+    while len(clusters) < n_clusters:
+        # Pick the cluster with the largest sum of squared errors that can be split.
+        candidates = [
+            (float(np.sum((X[members] - X[members].mean(axis=0)) ** 2)), index)
+            for index, members in enumerate(clusters)
+            if len(members) > 1
+        ]
+        if not candidates:
+            break
+        _, split_index = max(candidates)
+        members = clusters.pop(split_index)
+        points = X[members]
+
+        # Seed 2-means with the point farthest from the mean and the point farthest from that.
+        first = int(np.argmax(np.linalg.norm(points - points.mean(axis=0), axis=1)))
+        second = int(np.argmax(np.linalg.norm(points - points[first], axis=1)))
+        centers = points[[first, second]].copy()
+
+        assignment = np.zeros(len(points), dtype=int)
+        for _ in range(max_iterations):
+            distances = np.linalg.norm(points[:, None, :] - centers[None, :, :], axis=2)
+            assignment = np.argmin(distances, axis=1)
+            new_centers = centers.copy()
+            for side in (0, 1):
+                if np.any(assignment == side):
+                    new_centers[side] = points[assignment == side].mean(axis=0)
+            shift = np.max(np.linalg.norm(new_centers - centers, axis=1))
+            centers = new_centers
+            if shift <= tolerance:
+                break
+
+        left, right = members[assignment == 0], members[assignment == 1]
+        if not len(left) or not len(right):
+            # Identical points: fall back to an even split so progress is guaranteed.
+            half = len(members) // 2
+            left, right = members[:half], members[half:]
+        clusters.extend((left, right))
+
+    labels = np.empty(len(X), dtype=int)
+    for label, members in enumerate(clusters):
+        labels[members] = label
+    return labels
+
+
+def DBSCAN(X, eps=0.5, min_samples=5):
+    """
+    Density-Based Spatial Clustering of Applications with Noise.
+
+    A point is a core point if at least min_samples points (including itself)
+    lie within eps of it. Clusters grow outward from core points; points that
+    are not reachable from any core point are noise.
+
+    Parameters:
+    - X: Array of shape (n_samples, n_features).
+    - eps: Neighbourhood radius.
+    - min_samples: Minimum neighbourhood size for a core point.
+
+    Returns:
+    - labels: Cluster index for each sample, with -1 for noise.
+    """
+    X = _validate_cluster_input(X)
+    if isinstance(eps, bool) or not isinstance(eps, numbers.Real) or not math.isfinite(eps) or eps <= 0:
+        raise ValueError("eps must be a positive finite number.")
+    if isinstance(min_samples, bool) or not isinstance(min_samples, int) or min_samples < 1:
+        raise ValueError("min_samples must be a positive integer.")
+
+    distances = np.linalg.norm(X[:, None, :] - X[None, :, :], axis=2)
+    neighbors = [np.flatnonzero(row <= eps) for row in distances]
+    is_core = np.array([len(n) >= min_samples for n in neighbors])
+
+    UNVISITED, NOISE = -2, -1
+    labels = np.full(len(X), UNVISITED, dtype=int)
+    cluster = 0
+    for point in range(len(X)):
+        if labels[point] != UNVISITED:
+            continue
+        if not is_core[point]:
+            labels[point] = NOISE  # may later be claimed as a border point
+            continue
+        labels[point] = cluster
+        queue = list(neighbors[point])
+        while queue:
+            candidate = queue.pop()
+            if labels[candidate] == NOISE:
+                labels[candidate] = cluster  # border point
+            if labels[candidate] != UNVISITED:
+                continue
+            labels[candidate] = cluster
+            if is_core[candidate]:
+                queue.extend(neighbors[candidate])
+        cluster += 1
+    return labels
 
 def affinity_propagation(S, max_iter=200, damping=0.5, convergence_iter=15):
     """
