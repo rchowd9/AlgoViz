@@ -1,5 +1,6 @@
 import random
 import math
+import numbers
 
 
 def geneticAlgorithm(population, fitness_function, generations, mutation_rate, trace=None):
@@ -897,7 +898,7 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
         raise ValueError("Gradient function must be callable.")
     if (
         isinstance(learning_rate, bool)
-        or not isinstance(learning_rate, (int, float))
+        or not isinstance(learning_rate, numbers.Real)
         or not math.isfinite(learning_rate)
         or learning_rate <= 0
     ):
@@ -905,9 +906,9 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
     if isinstance(iterations, bool) or not isinstance(iterations, int) or iterations < 0:
         raise ValueError("Iterations must be a non-negative integer.")
 
-    scalar_point = isinstance(initial_point, (int, float)) and not isinstance(initial_point, bool)
+    scalar_point = isinstance(initial_point, numbers.Real) and not isinstance(initial_point, bool)
     if scalar_point:
-        point = float(initial_point)
+        point = initial_point
         if not math.isfinite(point):
             raise ValueError("Initial point must contain finite numbers.")
 
@@ -917,7 +918,7 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
                 gradient = gradient[0]
             if (
                 isinstance(gradient, bool)
-                or not isinstance(gradient, (int, float))
+                or not isinstance(gradient, numbers.Real)
                 or not math.isfinite(gradient)
             ):
                 raise ValueError("Gradient function must return a finite number.")
@@ -935,7 +936,7 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
     for coordinate in point:
         if (
             isinstance(coordinate, bool)
-            or not isinstance(coordinate, (int, float))
+            or not isinstance(coordinate, numbers.Real)
             or not math.isfinite(coordinate)
         ):
             raise ValueError("Initial point must contain finite numbers.")
@@ -948,7 +949,7 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
         for coordinate, component in zip(point, gradient):
             if (
                 isinstance(component, bool)
-                or not isinstance(component, (int, float))
+                or not isinstance(component, numbers.Real)
                 or not math.isfinite(component)
             ):
                 raise ValueError("Gradient function must return finite numbers.")
@@ -977,7 +978,7 @@ def stochasticGradientDescent(gradient_function, initial_point, learning_rate, i
         raise ValueError("Gradient function must be callable.")
     if (
         isinstance(learning_rate, bool)
-        or not isinstance(learning_rate, (int, float))
+        or not isinstance(learning_rate, numbers.Real)
         or not math.isfinite(learning_rate)
         or learning_rate <= 0
     ):
@@ -993,7 +994,7 @@ def stochasticGradientDescent(gradient_function, initial_point, learning_rate, i
         gradient = gradient_function(sampled_point)
         index = point.index(sampled_point)
 
-        if isinstance(sampled_point, (int, float)) and not isinstance(sampled_point, bool):
+        if isinstance(sampled_point, numbers.Real) and not isinstance(sampled_point, bool):
             if (
                 isinstance(gradient, (list, tuple))
                 and len(gradient) == 1
@@ -1001,7 +1002,7 @@ def stochasticGradientDescent(gradient_function, initial_point, learning_rate, i
                 gradient = gradient[0]
             if (
                 isinstance(gradient, bool)
-                or not isinstance(gradient, (int, float))
+                or not isinstance(gradient, numbers.Real)
                 or not math.isfinite(gradient)
             ):
                 raise ValueError("Gradient function must return a finite number.")
@@ -1015,7 +1016,7 @@ def stochasticGradientDescent(gradient_function, initial_point, learning_rate, i
             for coordinate, component in zip(sampled_point, gradient):
                 if (
                     isinstance(component, bool)
-                    or not isinstance(component, (int, float))
+                    or not isinstance(component, numbers.Real)
                     or not math.isfinite(component)
                 ):
                     raise ValueError("Gradient function must return finite numbers.")
