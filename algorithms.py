@@ -1436,7 +1436,61 @@ class LinearSVM:
         approx = np.dot(X, self.w) + self.b
         return np.sign(approx)
 
-def kMeansClustering():
+import numpy as np
+from scipy.spatial.distance import cdist
+
+def kmeans(X, k, max_iterations=100, tolerance=1e-8):
+    """
+    K-Means clustering from scratch using NumPy.
+    
+    Parameters:
+    - X: numpy array of shape (n_samples, n_features)
+    - k: number of clusters
+    - max_iterations: maximum number of iterations
+    - tolerance: stop when centroid shift < tolerance
+    
+    Returns:
+    - labels: cluster labels for each point
+    - centroids: final centroids
+    """
+    # Step 1: Randomly initialize centroids
+    centroids = X[np.random.choice(len(X), k, replace=False)].copy()
+    
+    for _ in range(max_iterations):
+        # Step 2: Compute distances from each point to all centroids
+        distances = cdist(X, centroids, metric='euclidean')
+        
+        # Step 3: Assign each point to nearest centroid
+        labels = np.array([np.argmin(distances[i]) for i in range(len(X))])
+        
+        # Step 4: Update centroids as mean of assigned points
+        new_centroids = np.vstack([
+            X[(labels == cluster_idx).nonzero()[0]].mean(axis=0)
+            for cluster_idx in range(k)
+        ])
+        
+        # Check convergence
+        if np.linalg.norm(new_centroids - centroids) <= tolerance:
+            centroids = new_centroids
+            break
+        
+        centroids = new_centroids
+    
+    return labels, centroids
+
+# Example usage:
+if __name__ == "__main__":
+    # Sample data
+    X = np.array([
+        [0.0, 0.0], [0.0, 1.0], [1.0, 0.0],
+        [8.0, 8.0], [8.0, 9.0], [9.0, 8.0]
+    ])
+    
+    labels, centroids = kmeans(X, k=2)
+    
+    print("Centroids:\n", centroids)
+    print("Labels:\n", labels)
+
 
 def hierarchialClustering():
 
