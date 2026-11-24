@@ -680,22 +680,33 @@ class DecisionTree:
     """A small classification tree used by the RandomForest implementation."""
 
     def __init__(self, max_depth=None):
+        if max_depth is not None and (
+            isinstance(max_depth, bool) or not isinstance(max_depth, int) or max_depth < 0
+        ):
+            raise ValueError("Maximum depth must be a non-negative integer.")
         self.max_depth = max_depth
         self.tree = None
+        self.classes_ = []
 
     def fit(self, X, y):
-        rows = X.tolist() if hasattr(X, "tolist") else list(X)
-        labels = y.tolist() if hasattr(y, "tolist") else list(y)
+        rows, labels = _validated_training_data(X, y)
+        self.classes_ = list(dict.fromkeys(labels))
 
         def build(indices, depth):
             counts = {}
             for index in indices:
                 counts[labels[index]] = counts.get(labels[index], 0) + 1
-            majority = max(counts, key=counts.get)
+            majority = _majority_label([labels[index] for index in indices])
+            impurity = 1 - sum((count / len(indices)) ** 2 for count in counts.values())
+            node_data = {
+                "samples": len(indices),
+                "counts": counts,
+                "impurity": impurity,
+            }
             if len(counts) == 1 or (self.max_depth is not None and depth >= self.max_depth):
-                return {"value": majority}
+                return dict(node_data, value=majority)
 
-            parent_impurity = 1 - sum((count / len(indices)) ** 2 for count in counts.values())
+            parent_impurity = impurity
             best_gain, best_split = 0, None
             for feature in range(len(rows[0])):
                 try:
@@ -721,22 +732,22 @@ class DecisionTree:
                         best_gain, best_split = gain, (feature, threshold, left, right)
 
             if best_split is None:
-                return {"value": majority}
+                return dict(node_data, value=majority)
             feature, threshold, left, right = best_split
-            return {
+            return dict(node_data, **{
                 "feature": feature,
                 "threshold": threshold,
                 "left": build(left, depth + 1),
                 "right": build(right, depth + 1),
-            }
+            })
 
         self.tree = build(list(range(len(rows))), 0)
         return self
 
     def predict(self, X):
-        import numpy as np
-
         rows = X.tolist() if hasattr(X, "tolist") else list(X)
+        if self.tree is None:
+            raise ValueError("The decision tree must be fitted before prediction.")
 
         def classify(row):
             node = self.tree
@@ -748,11 +759,8 @@ class DecisionTree:
 
 
 def trainDecisionTreeClassifier(data, labels, max_depth=3):
-    """Fit a scikit-learn decision tree classifier."""
-    from sklearn.tree import DecisionTreeClassifier
-
-    classifier = DecisionTreeClassifier(max_depth=max_depth, random_state=0)
-    return classifier.fit(data, labels)
+    """Train a classification tree using Gini impurity and numeric splits."""
+    return DecisionTree(max_depth=max_depth).fit(data, labels)
 
 
 class RandomForest:
@@ -770,17 +778,33 @@ class RandomForest:
         return X[indices], y[indices]
 
     def fit(self, X, y):
+        rows, labels = _validated_training_data(X, y)
+        if isinstance(self.n_estimators, bool) or not isinstance(self.n_estimators, int) or self.n_estimators < 1:
+            raise ValueError("Number of estimators must be a positive integer.")
+        self.trees = []
         for _ in range(self.n_estimators):
-            X_boot, y_boot = self._bootstrap_sample(X, y)
+            if self.bootstrap:
+                indices = [random.randrange(len(rows)) for _ in rows]
+                X_boot = [rows[index] for index in indices]
+                y_boot = [labels[index] for index in indices]
+            else:
+                X_boot, y_boot = rows, labels
             tree = DecisionTree(max_depth=self.max_depth)
             tree.fit(X_boot, y_boot)
             self.trees.append(tree)
+        self.classes_ = list(dict.fromkeys(labels))
+        return self
 
     def predict(self, X):
-        import numpy as np
-
-        predictions = np.array([tree.predict(X) for tree in self.trees])
-        return np.mean(predictions, axis=0)  # regression: average; classification: majority vote
+        if not self.trees:
+            raise ValueError("The random forest must be fitted before prediction.")
+        predictions = [tree.predict(X).tolist() for tree in self.trees]
+        return np.asarray(
+            [
+                _majority_label([tree_prediction[index] for tree_prediction in predictions])
+                for index in range(len(predictions[0]))
+            ]
+        )
 
 def iterativeDichotomiser3(data, labels, depth=0, max_depth=None):
     """
@@ -1114,28 +1138,7 @@ def decisionTreeLearning(data, labels, depth=0, max_depth=None):
     Returns:
     - A decision tree represented as a nested dictionary.
     """
-    from collections import Counter
-    import numpy as np
-
-    # Base case: if all labels are the same, return that label
-    if len(set(labels)) == 1:
-        return labels[0]
-
-    # Base case: if no features left or max depth reached, return the most common label
-    if len(data[0]) == 0 or (max_depth is not None and depth >= max_depth):
-        return Counter(labels).most_common(1)[0][0]
-
-    # Find the best feature to split on using Gini impurity
-    def gini_impurity(labels):
-        total = len(labels)
-        counts = Counter(labels)
-        return 1 - sum((count / total) ** 2 for count in counts.values())
-
-    current_gini = gini_impurity(labels)
-
-    best_gain = 0
-    best_feature = None
-    best_splits = None
+    return _cart_classification_tree(data, labels, depth, max_depth)
 
 import numpy as np
 
