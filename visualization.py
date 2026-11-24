@@ -1,6 +1,7 @@
 import heapq
 import json
 import math
+import numbers
 from itertools import count
 
 from searching import binarySearch, fibonacciSearch, linearSearch, ternarySearch
@@ -491,3 +492,119 @@ def hill_climb_trace(start, minimum=-10, maximum=10):
         if -(next_point - 3) ** 2 + 9 <= -(current - 3) ** 2 + 9:
             return points
         points.append(next_point)
+
+
+def kmeans_trace(points, n_clusters, max_iterations=100, tolerance=1e-8):
+    try:
+        points = [list(point) for point in points]
+    except TypeError as error:
+        raise ValueError("Points must be a non-empty collection of numeric vectors.") from error
+    if not points or not points[0]:
+        raise ValueError("Points must be a non-empty collection of numeric vectors.")
+
+    n_features = len(points[0])
+    for point in points:
+        if len(point) != n_features or any(
+            isinstance(value, bool)
+            or not isinstance(value, numbers.Real)
+            or not math.isfinite(value)
+            for value in point
+        ):
+            raise ValueError("Each point must have the same number of finite numeric features.")
+    points = [[float(value) for value in point] for point in points]
+
+    if (
+        isinstance(n_clusters, bool)
+        or not isinstance(n_clusters, int)
+        or not 1 <= n_clusters <= len(points)
+    ):
+        raise ValueError("Number of clusters must be an integer from 1 to the number of points.")
+    if isinstance(max_iterations, bool) or not isinstance(max_iterations, int) or max_iterations < 1:
+        raise ValueError("Maximum iterations must be a positive integer.")
+    if (
+        isinstance(tolerance, bool)
+        or not isinstance(tolerance, numbers.Real)
+        or not math.isfinite(tolerance)
+        or tolerance < 0
+    ):
+        raise ValueError("Tolerance must be a non-negative finite number.")
+
+    def squared_distance(first, second):
+        return sum((left - right) ** 2 for left, right in zip(first, second))
+
+    # Farthest-first initialization makes the trace reproducible without a seed.
+    center_indices = [max(
+        range(len(points)),
+        key=lambda index: squared_distance(
+            points[index],
+            [sum(point[feature] for point in points) / len(points) for feature in range(n_features)],
+        ),
+    )]
+    while len(center_indices) < n_clusters:
+        center_indices.append(
+            max(
+                (
+                    index for index in range(len(points))
+                    if index not in center_indices
+                ),
+                key=lambda index: min(
+                    squared_distance(points[index], points[center_index])
+                    for center_index in center_indices
+                ),
+            )
+        )
+    centroids = [points[index].copy() for index in center_indices]
+    trace = []
+
+    for iteration in range(1, max_iterations + 1):
+        labels = [
+            min(
+                range(n_clusters),
+                key=lambda cluster: squared_distance(point, centroids[cluster]),
+            )
+            for point in points
+        ]
+        new_centroids = []
+        for cluster in range(n_clusters):
+            members = [point for point, label in zip(points, labels) if label == cluster]
+            if members:
+                new_centroids.append(
+                    [
+                        sum(point[feature] for point in members) / len(members)
+                        for feature in range(n_features)
+                    ]
+                )
+            else:
+                new_centroids.append(centroids[cluster].copy())
+
+        shift = max(
+            math.sqrt(squared_distance(old, new))
+            for old, new in zip(centroids, new_centroids)
+        )
+        centroids = new_centroids
+        updated_labels = [
+            min(
+                range(n_clusters),
+                key=lambda cluster: squared_distance(point, centroids[cluster]),
+            )
+            for point in points
+        ]
+        inertia = sum(
+            squared_distance(point, centroids[label])
+            for point, label in zip(points, updated_labels)
+        )
+        trace.append(
+            {
+                "iteration": iteration,
+                "points": [point.copy() for point in points],
+                "labels": updated_labels,
+                "centroids": [centroid.copy() for centroid in centroids],
+                "inertia": inertia,
+                "description": f"Update cluster assignments and centroids (inertia {inertia:.3g})",
+            }
+        )
+        if shift <= tolerance and updated_labels == labels:
+            break
+        labels = updated_labels
+
+    return trace

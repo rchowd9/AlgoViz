@@ -6,6 +6,7 @@ from visualization import (
     ARRAY_SEARCH_ALGORITHMS,
     decision_tree_gini_details,
     decision_tree_source,
+    kmeans_trace,
     parse_graph,
     search_array,
     search_graph,
@@ -164,6 +165,25 @@ class AlgorithmTraceTests(unittest.TestCase):
 
     def test_hill_climbing_reaches_peak(self):
         self.assertEqual(hill_climb_trace(-8)[-1], 3)
+
+    def test_kmeans_trace_separates_clear_groups_and_converges(self):
+        steps = kmeans_trace([[0, 0], [0, 1], [10, 10], [10, 11]], 2)
+
+        result = steps[-1]
+        self.assertEqual(result["labels"][0], result["labels"][1])
+        self.assertEqual(result["labels"][2], result["labels"][3])
+        self.assertNotEqual(result["labels"][0], result["labels"][2])
+        self.assertEqual(result["centroids"], [[0.0, 0.5], [10.0, 10.5]])
+        self.assertEqual(result["inertia"], 1.0)
+        self.assertLessEqual(len(steps), 100)
+
+    def test_kmeans_trace_validates_data_and_parameters(self):
+        with self.assertRaisesRegex(ValueError, "same number"):
+            kmeans_trace([[0, 1], [2]], 1)
+        with self.assertRaisesRegex(ValueError, "Number of clusters"):
+            kmeans_trace([[0], [1]], 3)
+        with self.assertRaisesRegex(ValueError, "finite numeric"):
+            kmeans_trace([[0], [float("nan")]], 1)
 
 
 class FlaskApiTests(unittest.TestCase):
