@@ -1435,3 +1435,6 @@ class LinearSVM:
         """
         approx = np.dot(X, self.w) + self.b
         return np.sign(approx)
+
+def kMeansClustering():
+    
