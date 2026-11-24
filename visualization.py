@@ -27,30 +27,56 @@ ARRAY_SEARCH_ALGORITHMS = (
 
 
 def decision_tree_source(classifier, feature_names):
-    from sklearn.tree import export_graphviz
+    if classifier.tree is None:
+        raise ValueError("The decision tree must be fitted before it can be visualized.")
+    if len(feature_names) == 0:
+        raise ValueError("At least one feature name is required.")
 
-    return export_graphviz(
-        classifier,
-        feature_names=feature_names,
-        class_names=[str(label) for label in classifier.classes_],
-        filled=True,
-        rounded=True,
-    )
+    def quote(value):
+        return json.dumps(str(value))
+
+    lines = [
+        "digraph Tree {",
+        '  node [shape=box, style="filled, rounded", fontname="Helvetica"];',
+    ]
+    next_id = 0
+
+    def visit(node, node_id):
+        nonlocal next_id
+        if "value" in node:
+            label = f"{node['value']}\\nsamples = {node['samples']}"
+            fill = "#c6e5c6"
+        else:
+            feature = node["feature"]
+            feature_name = feature_names[feature] if feature < len(feature_names) else f"feature_{feature}"
+            label = f"{feature_name} <= {node['threshold']:.3g}\\nsamples = {node['samples']}"
+            fill = "#e8eef7"
+        lines.append(f"  {node_id} [label={quote(label)}, fillcolor={quote(fill)}];")
+        if "value" not in node:
+            left_id, right_id = next_id + 1, next_id + 2
+            next_id += 2
+            lines.append(f"  {node_id} -> {left_id} [label=\"True\"];")
+            lines.append(f"  {node_id} -> {right_id} [label=\"False\"];")
+            visit(node["left"], left_id)
+            visit(node["right"], right_id)
+        else:
+            lines[-1] = lines[-1].replace(
+                "];",
+                f", xlabel={quote(str(node['value']))}];",
+            )
+
+    visit(classifier.tree, 0)
+    lines.append("}")
+    return "\n".join(lines)
 
 
 def decision_tree_gini_details(classifier):
-    tree = classifier.tree_
     classes = [str(label) for label in classifier.classes_]
     details = []
 
-    def visit(node_id, path):
-        sample_count = int(tree.n_node_samples[node_id])
-        values = tree.value[node_id][0]
-        value_total = sum(values)
-        class_counts = [
-            int(round(value / value_total * sample_count)) if value_total else 0
-            for value in values
-        ]
+    def visit(node, path):
+        sample_count = node["samples"]
+        class_counts = [node["counts"].get(label, 0) for label in classifier.classes_]
         gini = 1 - sum((count / sample_count) ** 2 for count in class_counts)
         terms = " - ".join(
             f"({count}/{sample_count})²" for count in class_counts if count
@@ -66,15 +92,14 @@ def decision_tree_gini_details(classifier):
             "Weighted child Gini": "—",
             "Gini gain": "—",
         }
-
-        left_child = tree.children_left[node_id]
-        right_child = tree.children_right[node_id]
         details.append(item)
-        if left_child != right_child:
-            left_count = int(tree.n_node_samples[left_child])
-            right_count = int(tree.n_node_samples[right_child])
-            left_gini = tree.impurity[left_child]
-            right_gini = tree.impurity[right_child]
+        if "value" not in node:
+            left_child = node["left"]
+            right_child = node["right"]
+            left_count = left_child["samples"]
+            right_count = right_child["samples"]
+            left_gini = left_child["impurity"]
+            right_gini = right_child["impurity"]
             weighted_child_gini = (
                 left_count / sample_count * left_gini
                 + right_count / sample_count * right_gini
@@ -84,7 +109,7 @@ def decision_tree_gini_details(classifier):
             visit(left_child, f"{path} → Left")
             visit(right_child, f"{path} → Right")
 
-    visit(0, "Root")
+    visit(classifier.tree, "Root")
     return details
 
 
