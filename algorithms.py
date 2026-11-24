@@ -1166,6 +1166,11 @@ class DecisionStump:
         self.alpha = None  # Weight assigned by AdaBoost
 
     def predict(self, X):
+        if self.feature_index is None or self.threshold is None:
+            raise ValueError("The decision stump must be fitted before prediction.")
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2 or self.feature_index >= X.shape[1]:
+            raise ValueError("X must contain the feature used to fit this stump.")
         n_samples = X.shape[0]
         predictions = np.ones(n_samples)
         if self.polarity == 1:
@@ -1183,18 +1188,33 @@ class AdaBoost:
         self.stumps = []
 
     def fit(self, X, y):
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y, dtype=float)
+        if X.ndim != 2 or not len(X) or not X.shape[1]:
+            raise ValueError("X must be a non-empty two-dimensional array.")
+        if y.ndim != 1 or len(y) != len(X) or not np.all(np.isin(y, (-1, 1))):
+            raise ValueError("y must contain one -1 or 1 label for each sample.")
+        if isinstance(self.n_estimators, bool) or not isinstance(self.n_estimators, int) or self.n_estimators < 1:
+            raise ValueError("n_estimators must be a positive integer.")
+        if not np.all(np.isfinite(X)):
+            raise ValueError("X must contain only finite numbers.")
         n_samples, n_features = X.shape
-        # Initialize weights equally
-        w = np.full(n_samples, 1 / n_samples)
+        weights = np.full(n_samples, 1 / n_samples)
+        self.stumps = []
 
         for _ in range(self.n_estimators):
             stump = DecisionStump()
-            min_error = float('inf')
-
-            # Find best stump for current weights
+            min_error = math.inf
             for feature_idx in range(n_features):
                 feature_values = X[:, feature_idx]
-                thresholds = np.unique(feature_values)
+                unique_values = np.unique(feature_values)
+                thresholds = np.concatenate(
+                    (
+                        [unique_values[0] - 1],
+                        (unique_values[:-1] + unique_values[1:]) / 2,
+                        [unique_values[-1] + 1],
+                    )
+                )
                 for threshold in thresholds:
                     for polarity in [1, -1]:
                         predictions = np.ones(n_samples)
@@ -1203,31 +1223,36 @@ class AdaBoost:
                         else:
                             predictions[feature_values >= threshold] = -1
 
-                        # Calculate weighted error
-                        error = np.sum(w[y != predictions])
-
+                        error = float(weights[y != predictions].sum())
                         if error < min_error:
                             min_error = error
                             stump.polarity = polarity
                             stump.threshold = threshold
                             stump.feature_index = feature_idx
 
-            # Compute alpha (learner weight)
-            epsilon = 1e-10  # Avoid division by zero
-            stump.alpha = 0.5 * np.log((1 - min_error) / (min_error + epsilon))
-
-            # Update weights
+            if min_error >= 0.5:
+                break
+            if min_error == 0:
+                stump.alpha = 0.5 * math.log((1 - 1e-12) / 1e-12)
+                self.stumps.append(stump)
+                break
+            stump.alpha = 0.5 * math.log((1 - min_error) / min_error)
             predictions = stump.predict(X)
-            w *= np.exp(-stump.alpha * y * predictions)
-            w /= np.sum(w)  # Normalize
-
+            weights *= np.exp(-stump.alpha * y * predictions)
+            weights /= weights.sum()
             self.stumps.append(stump)
+        if not self.stumps:
+            raise ValueError("No weak learner performed better than random guessing.")
+        return self
 
     def predict(self, X):
-        # Aggregate predictions from all stumps
+        if not self.stumps:
+            raise ValueError("The AdaBoost model must be fitted before prediction.")
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2:
+            raise ValueError("X must be a two-dimensional array.")
         stump_preds = [stump.alpha * stump.predict(X) for stump in self.stumps]
-        final_pred = np.sign(np.sum(stump_preds, axis=0))
-        return final_pred
+        return np.where(np.sum(stump_preds, axis=0) >= 0, 1, -1)
 
 def gradient_boosting(X, y, n_estimators=10, learning_rate=0.1, max_depth=3):
     """Fit shallow regression trees to squared-error residuals and return fitted values."""
@@ -1431,6 +1456,8 @@ class isolationTree:
 # ------------------------------
 def c_factor(n):
     """Average path length of unsuccessful search in Binary Search Tree."""
+    if isinstance(n, bool) or not isinstance(n, numbers.Real) or n < 0:
+        raise ValueError("n must be a non-negative number.")
     if n <= 1:
         return 0
     return 2 * (math.log(n - 1) + 0.5772156649) - (2 * (n - 1) / n)
@@ -1441,31 +1468,53 @@ def c_factor(n):
 # ------------------------------
 class IsolationForest:
     def __init__(self, n_trees=100, sample_size=256):
+        if isinstance(n_trees, bool) or not isinstance(n_trees, int) or n_trees < 1:
+            raise ValueError("n_trees must be a positive integer.")
+        if isinstance(sample_size, bool) or not isinstance(sample_size, int) or sample_size < 1:
+            raise ValueError("sample_size must be a positive integer.")
         self.n_trees = n_trees
         self.sample_size = sample_size
         self.trees = []
+        self.n_features_ = None
 
     def fit(self, X):
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2 or not len(X) or not X.shape[1]:
+            raise ValueError("X must be a non-empty two-dimensional array.")
+        if not np.all(np.isfinite(X)):
+            raise ValueError("X must contain only finite numbers.")
+        self.n_features_ = X.shape[1]
+        self.sample_size = min(self.sample_size, len(X))
         self.trees = []
-        max_depth = math.ceil(math.log2(self.sample_size))
+        max_depth = max(1, math.ceil(math.log2(max(self.sample_size, 2))))
         for _ in range(self.n_trees):
-            # Random subsample without replacement
-            sample_indices = np.random.choice(len(X), self.sample_size, replace=False)
+            sample_indices = random.sample(range(len(X)), self.sample_size)
             sample = X[sample_indices]
             tree = isolationTree(depth=0, max_depth=max_depth)
             tree.fit(sample)
             self.trees.append(tree)
+        return self
 
     def anomaly_score(self, X):
+        if not self.trees:
+            raise ValueError("The isolation forest must be fitted before scoring.")
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2 or X.shape[1] != self.n_features_:
+            raise ValueError("X must have the same number of features used during fitting.")
+        if not np.all(np.isfinite(X)):
+            raise ValueError("X must contain only finite numbers.")
         scores = []
         for x in X:
             path_lengths = [tree.path_length(x) for tree in self.trees]
             avg_path_length = np.mean(path_lengths)
-            score = 2 ** (-avg_path_length / c_factor(self.sample_size))
+            normalization = c_factor(self.sample_size)
+            score = 0.5 if normalization == 0 else 2 ** (-avg_path_length / normalization)
             scores.append(score)
         return np.array(scores)
 
     def predict(self, X, threshold=0.5):
+        if isinstance(threshold, bool) or not isinstance(threshold, numbers.Real) or not 0 <= threshold <= 1:
+            raise ValueError("threshold must be between 0 and 1.")
         scores = self.anomaly_score(X)
         return np.where(scores >= threshold, 1, 0)  # 1 = anomaly, 0 = normal
 
@@ -1478,6 +1527,16 @@ class SVM:
         self.b = None
 
     def fit(self, X, y):
+        X = np.asarray(X, dtype=float)
+        y = np.asarray(y)
+        if X.ndim != 2 or not len(X) or not X.shape[1]:
+            raise ValueError("X must be a non-empty two-dimensional array.")
+        if y.ndim != 1 or len(y) != len(X):
+            raise ValueError("y must contain one label for each sample.")
+        if isinstance(self.n_iters, bool) or not isinstance(self.n_iters, int) or self.n_iters < 1:
+            raise ValueError("n_iters must be a positive integer.")
+        if self.lr <= 0 or self.lambda_param < 0:
+            raise ValueError("learning_rate must be positive and lambda_param non-negative.")
         n_samples, n_features = X.shape
         y_ = np.where(y <= 0, -1, 1)
 
@@ -1486,15 +1545,18 @@ class SVM:
 
         for _ in range(self.n_iters):
             for idx, x_i in enumerate(X):
-                condition = y_[idx] * (np.dot(x_i, self.w) - self.b) >= 1
+                condition = y_[idx] * (np.dot(x_i, self.w) + self.b) >= 1
                 if condition:
                     self.w -= self.lr * (2 * self.lambda_param * self.w)
                 else:
-                    self.w -= self.lr * (2 * self.lambda_param * self.w - np.dot(x_i, y_[idx]))
-                    self.b -= self.lr * y_[idx]
+                    self.w -= self.lr * (2 * self.lambda_param * self.w - y_[idx] * x_i)
+                    self.b += self.lr * y_[idx]
+        return self
 
     def predict(self, X):
-        approx = np.dot(X, self.w) - self.b
+        if self.w is None:
+            raise ValueError("The SVM must be fitted before prediction.")
+        approx = np.dot(np.asarray(X, dtype=float), self.w) + self.b
         return np.sign(approx)
 
 
