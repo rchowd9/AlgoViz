@@ -1447,3 +1447,7 @@ def agglomartiveClustering():
 def DivisiveClustering():
 
 def DBSCAN():
+
+def affinityPropogation():
+
+def meanShiftClustering():
