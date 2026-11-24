@@ -2,7 +2,11 @@ import unittest
 from unittest.mock import patch
 
 from algorithms import (
+    DBSCAN,
+    DecisionTree,
     alphaBetaPruning,
+    affinity_propagation,
+    agglomerative_clustering,
     dijikstra,
     euclideanAlgorithm,
     geneticAlgorithm,
@@ -180,6 +184,35 @@ class AdditionalAlgorithmTests(unittest.TestCase):
             [step["distance"] for step in trace],
             sorted(step["distance"] for step in trace),
         )
+
+    def test_decision_tree_exposes_metrics_used_by_the_app(self):
+        classifier = DecisionTree(max_depth=2).fit(
+            [[1, 1], [2, 1], [4, 4], [5, 4]],
+            ["red", "red", "blue", "blue"],
+        )
+
+        self.assertEqual(classifier.get_depth(), 1)
+        self.assertEqual(classifier.get_n_leaves(), 2)
+        self.assertEqual(classifier.score([[1, 1], [5, 4]], ["red", "blue"]), 1.0)
+
+    def test_clustering_algorithms_separate_two_clear_groups(self):
+        points = [[0, 0], [0, 1], [10, 10], [10, 11]]
+
+        dbscan_labels = DBSCAN(points, eps=1.1, min_samples=2)
+        hierarchical_labels, merges = agglomerative_clustering(
+            points, n_clusters=2, method="average"
+        )
+        self.assertEqual(dbscan_labels[0], dbscan_labels[1])
+        self.assertNotEqual(dbscan_labels[0], dbscan_labels[2])
+        self.assertEqual(hierarchical_labels[0], hierarchical_labels[1])
+        self.assertNotEqual(hierarchical_labels[0], hierarchical_labels[2])
+        self.assertEqual(len(merges), 2)
+
+    def test_affinity_propagation_handles_single_sample(self):
+        centers, labels = affinity_propagation([[1.0]], max_iter=5)
+
+        self.assertEqual(centers, [0])
+        self.assertEqual(labels.tolist(), [0])
 
     def test_simulated_annealing_trace_records_accepted_moves(self):
         trace = []
