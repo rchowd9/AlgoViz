@@ -487,26 +487,21 @@ def beliefStateUpdate(prior_belief, observation, transition_model, observation_m
     Returns:
     - A new belief state as a dictionary (state -> updated probability).
     """
-    new_belief = {}
-    total_probability = 0.0
+    predicted = {}
+    for state, prior_probability in prior_belief.items():
+        for next_state, transition_probability in transition_model(state).items():
+            predicted[next_state] = predicted.get(next_state, 0.0) + (
+                prior_probability * transition_probability
+            )
 
-    for state in prior_belief:
-        # Predict step: calculate the predicted belief for each possible next state
-        predicted_belief = 0.0
-        for next_state, transition_prob in transition_model(state).items():
-            predicted_belief += prior_belief[state] * transition_prob
-
-        # Update step: incorporate the observation
-        observation_prob = observation_model(state, observation)
-        new_belief[state] = predicted_belief * observation_prob
-        total_probability += new_belief[state]
-
-    # Normalize the new belief state
-    if total_probability > 0:
-        for state in new_belief:
-            new_belief[state] /= total_probability
-
-    return new_belief
+    updated = {
+        state: probability * observation_model(state, observation)
+        for state, probability in predicted.items()
+    }
+    total_probability = sum(updated.values())
+    if total_probability <= 0:
+        raise ValueError("The observation has zero probability under the predicted belief.")
+    return {state: probability / total_probability for state, probability in updated.items()}
 
 def kNearestNeighbors(data, query_point, k, trace=None):
     """
@@ -520,22 +515,24 @@ def kNearestNeighbors(data, query_point, k, trace=None):
     Returns:
     - A list of the k nearest neighbors' labels.
     """
-    from collections import Counter
-    import math 
+    if isinstance(k, bool) or not isinstance(k, int) or k < 1:
+        raise ValueError("k must be a positive integer.")
+    if not data:
+        raise ValueError("Training data must not be empty.")
+    if k > len(data):
+        raise ValueError("k cannot exceed the number of training samples.")
+    query = list(query_point)
+    if not query:
+        raise ValueError("Points must contain at least one coordinate.")
 
-    
-
-    def euclidean_distance(point1, point2): 
-        return math.sqrt(sum((x - y) ** 2 for x, y in zip(point1, point2)))
-
-    # Calculate distances from the query point to all points in the dataset
-    distances = [
-        (euclidean_distance(point, query_point), index, point, label)
-        for index, (point, label) in enumerate(data)
-    ]
-    
-    # Sort by distance and select the k nearest neighbors
-    distances.sort(key=lambda x: x[0])
+    distances = []
+    for index, (point, label) in enumerate(data):
+        point = list(point)
+        if len(point) != len(query):
+            raise ValueError("Training points and the query must have matching dimensions.")
+        distance = math.sqrt(sum((x - y) ** 2 for x, y in zip(point, query)))
+        distances.append((distance, index, point, label))
+    distances.sort(key=lambda item: (item[0], item[1]))
     k_nearest_neighbors = distances[:k]
 
     if trace is not None:
@@ -551,11 +548,7 @@ def kNearestNeighbors(data, query_point, k, trace=None):
 
     # Extract the labels of the k nearest neighbors
     labels = [label for _, _, _, label in k_nearest_neighbors]
-
-    # Return the most common label among the k nearest neighbors
-    most_common_label = Counter(labels).most_common(1)[0][0]
-    
-    return most_common_label
+    return _majority_label(labels)
 
 def euclideanAlgorithm(data, query_point):
     """
@@ -568,17 +561,20 @@ def euclideanAlgorithm(data, query_point):
     Returns:
     - The label of the nearest neighbor.
     """
-    import math
+    if not data:
+        raise ValueError("Training data must not be empty.")
+    query = list(query_point)
 
-    def euclidean_distance(point1, point2):
-        return math.sqrt(sum((x - y) ** 2 for x, y in zip(point1, point2)))
+    def distance(point):
+        point = list(point)
+        if len(point) != len(query):
+            raise ValueError("Training points and the query must have matching dimensions.")
+        return math.sqrt(sum((x - y) ** 2 for x, y in zip(point, query)))
 
-    # Find the nearest neighbor
-    nearest_neighbor = min(data, key=lambda x: euclidean_distance(x[0], query_point))
-    
+    nearest_neighbor = min(data, key=lambda item: distance(item[0]))
     return nearest_neighbor[1]
 
-def binaryGCDAlgorithm (a, b):
+def binaryGCDAlgorithm(a, b):
     """
     Implements the binary GCD algorithm (Stein's algorithm) to compute the greatest common divisor of two integers.
 
@@ -589,6 +585,8 @@ def binaryGCDAlgorithm (a, b):
     Returns:
     - The greatest common divisor of a and b.
     """
+    if isinstance(a, bool) or not isinstance(a, int) or isinstance(b, bool) or not isinstance(b, int):
+        raise ValueError("Both inputs must be integers.")
     a = abs(a)
     b = abs(b)
     if a == 0:
@@ -1089,10 +1087,17 @@ def stochasticGradientDescent(gradient_function, initial_point, learning_rate, i
         raise ValueError("Initial point must be a non-empty list or tuple.")
 
     point = list(initial_point)
+    for coordinate in point:
+        if isinstance(coordinate, numbers.Real):
+            if isinstance(coordinate, bool) or not math.isfinite(coordinate):
+                raise ValueError("Initial point must contain finite numbers.")
+        elif not isinstance(coordinate, (list, tuple)) or not coordinate:
+            raise ValueError("Data points must be numbers or non-empty lists/tuples.")
+
     for _ in range(iterations):
-        sampled_point = random.choice(point)
+        index = random.randrange(len(point))
+        sampled_point = point[index]
         gradient = gradient_function(sampled_point)
-        index = point.index(sampled_point)
 
         if isinstance(sampled_point, numbers.Real) and not isinstance(sampled_point, bool):
             if (
@@ -1115,12 +1120,19 @@ def stochasticGradientDescent(gradient_function, initial_point, learning_rate, i
             updated = []
             for coordinate, component in zip(sampled_point, gradient):
                 if (
+                    isinstance(coordinate, bool)
+                    or not isinstance(coordinate, numbers.Real)
+                    or not math.isfinite(coordinate)
+                    or
                     isinstance(component, bool)
                     or not isinstance(component, numbers.Real)
                     or not math.isfinite(component)
                 ):
-                    raise ValueError("Gradient function must return finite numbers.")
-                updated.append(coordinate - learning_rate * component)
+                    raise ValueError("Data points and gradients must contain finite numbers.")
+                next_coordinate = coordinate - learning_rate * component
+                if not math.isfinite(next_coordinate):
+                    raise ValueError("Stochastic gradient descent produced a non-finite point.")
+                updated.append(next_coordinate)
             point[index] = tuple(updated) if isinstance(sampled_point, tuple) else updated
 
     return tuple(point) if isinstance(initial_point, tuple) else point
