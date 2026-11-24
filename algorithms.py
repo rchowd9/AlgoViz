@@ -1,6 +1,9 @@
 import random
 import math
 import numbers
+from collections import Counter
+
+import numpy as np
 
 
 def geneticAlgorithm(population, fitness_function, generations, mutation_rate, trace=None):
@@ -792,58 +795,59 @@ def iterativeDichotomiser3(data, labels, depth=0, max_depth=None):
     Returns:
     - A decision tree represented as a nested dictionary.
     """
-    from collections import Counter
-    import numpy as np
+    rows, targets = _validated_training_data(data, labels)
+    if isinstance(depth, bool) or not isinstance(depth, int) or depth < 0:
+        raise ValueError("Depth must be a non-negative integer.")
+    if max_depth is not None and (
+        isinstance(max_depth, bool) or not isinstance(max_depth, int) or max_depth < 0
+    ):
+        raise ValueError("Maximum depth must be a non-negative integer.")
 
-    # Base case: if all labels are the same, return that label
-    if len(set(labels)) == 1:
-        return labels[0]
+    def entropy(values):
+        counts = Counter(values)
+        total = len(values)
+        return -sum((count / total) * math.log2(count / total) for count in counts.values())
 
-    # Base case: if no features left or max depth reached, return the most common label
-    if len(data[0]) == 0 or (max_depth is not None and depth >= max_depth):
-        return Counter(labels).most_common(1)[0][0]
+    def build(subset, subset_labels, current_depth, available_features):
+        majority = _majority_label(subset_labels)
+        if (
+            len(set(subset_labels)) == 1
+            or not available_features
+            or (max_depth is not None and current_depth >= max_depth)
+        ):
+            return majority
 
-    # Calculate entropy of current labels
-    def entropy(labels):
-        total = len(labels)
-        counts = Counter(labels)
-        return -sum((count / total) * np.log2(count / total) for count in counts.values())
+        parent_entropy = entropy(subset_labels)
+        best_feature = None
+        best_gain = 0.0
+        best_groups = None
+        for feature in available_features:
+            groups = {}
+            for row, label in zip(subset, subset_labels):
+                groups.setdefault(row[feature], []).append((row, label))
+            weighted_entropy = sum(
+                len(group) / len(subset_labels) * entropy([label for _, label in group])
+                for group in groups.values()
+            )
+            gain = parent_entropy - weighted_entropy
+            if gain > best_gain:
+                best_feature, best_gain, best_groups = feature, gain, groups
 
-    current_entropy = entropy(labels)
+        if best_feature is None:
+            return majority
+        remaining = [feature for feature in available_features if feature != best_feature]
+        branches = {
+            value: build(
+                [row for row, _ in group],
+                [label for _, label in group],
+                current_depth + 1,
+                remaining,
+            )
+            for value, group in best_groups.items()
+        }
+        return {"feature": best_feature, "branches": branches, "default": majority}
 
-    # Find the best feature to split on
-    best_gain = 0
-    best_feature = None
-    best_splits = None
-
-    num_features = len(data[0])
-    
-    for feature_index in range(num_features):
-        # Split data based on feature value
-        splits = {}
-        for i, row in enumerate(data):
-            feature_value = row[feature_index]
-            if feature_value not in splits:
-                splits[feature_value] = []
-            splits[feature_value].append(labels[i])
-
-        # Calculate weighted entropy after the split
-        weighted_entropy = sum((len(split) / len(labels)) * entropy(split) for split in splits.values())
-        
-        # Calculate information gain
-        gain = current_entropy - weighted_entropy
-        
-        if gain > best_gain:
-            best_gain = gain
-            best_feature = feature_index
-            best_splits = splits
-
-    # If no gain, return the most common label
-    if best_gain == 0:
-        return Counter(labels).most_common(1)[0][0]
-
-    # Create a subtree for each split
-    tree = {best_feature: {}}
+    return build(rows, targets, depth, list(range(len(rows[0]))))
 
 def CART(data, labels, depth=0, max_depth=None):
     """
@@ -858,28 +862,91 @@ def CART(data, labels, depth=0, max_depth=None):
     Returns:
     - A decision tree represented as a nested dictionary.
     """
-    from collections import Counter
-    import numpy as np
+    return _cart_classification_tree(data, labels, depth, max_depth)
 
-    # Base case: if all labels are the same, return that label
-    if len(set(labels)) == 1:
-        return labels[0]
 
-    # Base case: if no features left or max depth reached, return the most common label
-    if len(data[0]) == 0 or (max_depth is not None and depth >= max_depth):
-        return Counter(labels).most_common(1)[0][0]
+def _validated_training_data(data, labels):
+    rows = data.tolist() if hasattr(data, "tolist") else list(data)
+    targets = labels.tolist() if hasattr(labels, "tolist") else list(labels)
+    if not rows or not targets:
+        raise ValueError("Training data and labels must not be empty.")
+    if len(rows) != len(targets):
+        raise ValueError("Training data and labels must have the same length.")
+    if not rows[0]:
+        raise ValueError("Training data must contain at least one feature.")
+    feature_count = len(rows[0])
+    if any(len(row) != feature_count for row in rows):
+        raise ValueError("All training rows must have the same number of features.")
+    try:
+        for label in targets:
+            hash(label)
+    except TypeError as error:
+        raise ValueError("Labels must be hashable.") from error
+    return rows, targets
 
-    # Find the best feature to split on using Gini impurity
-    def gini_impurity(labels):
-        total = len(labels)
-        counts = Counter(labels)
-        return 1 - sum((count / total) ** 2 for count in counts.values())
 
-    current_gini = gini_impurity(labels)
+def _majority_label(labels):
+    counts = Counter(labels)
+    return max(counts, key=counts.get)
 
-    best_gain = 0
-    best_feature = None
-    best_splits = None
+
+def _cart_classification_tree(data, labels, depth=0, max_depth=None):
+    rows, targets = _validated_training_data(data, labels)
+    if isinstance(depth, bool) or not isinstance(depth, int) or depth < 0:
+        raise ValueError("Depth must be a non-negative integer.")
+    if max_depth is not None and (
+        isinstance(max_depth, bool) or not isinstance(max_depth, int) or max_depth < 0
+    ):
+        raise ValueError("Maximum depth must be a non-negative integer.")
+
+    def gini(values):
+        counts = Counter(values)
+        return 1 - sum((count / len(values)) ** 2 for count in counts.values())
+
+    def build(indices, current_depth):
+        current_labels = [targets[index] for index in indices]
+        majority = _majority_label(current_labels)
+        if (
+            len(set(current_labels)) == 1
+            or (max_depth is not None and current_depth >= max_depth)
+        ):
+            return majority
+
+        parent_impurity = gini(current_labels)
+        best_split = None
+        best_gain = 0.0
+        for feature in range(len(rows[0])):
+            try:
+                values = sorted({float(rows[index][feature]) for index in indices})
+            except (TypeError, ValueError):
+                continue
+            for left_value, right_value in zip(values, values[1:]):
+                threshold = (left_value + right_value) / 2
+                left = [index for index in indices if float(rows[index][feature]) <= threshold]
+                right = [index for index in indices if float(rows[index][feature]) > threshold]
+                if not left or not right:
+                    continue
+                weighted = (
+                    len(left) / len(indices) * gini([targets[index] for index in left])
+                    + len(right) / len(indices) * gini([targets[index] for index in right])
+                )
+                gain = parent_impurity - weighted
+                if gain > best_gain:
+                    best_gain = gain
+                    best_split = (feature, threshold, left, right)
+
+        if best_split is None:
+            return majority
+        feature, threshold, left, right = best_split
+        return {
+            "feature": feature,
+            "threshold": threshold,
+            "left": build(left, current_depth + 1),
+            "right": build(right, current_depth + 1),
+            "default": majority,
+        }
+
+    return build(list(range(len(rows))), depth)
 
 def gradientDescent(gradient_function, initial_point, learning_rate, iterations, trace=None):
     """
