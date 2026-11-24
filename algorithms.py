@@ -1437,4 +1437,5 @@ class LinearSVM:
         return np.sign(approx)
 
 def kMeansClustering():
-    
+
+def hierarchialClustering():
