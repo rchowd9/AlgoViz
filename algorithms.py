@@ -1439,3 +1439,5 @@ class LinearSVM:
 def kMeansClustering():
 
 def hierarchialClustering():
+
+def clustering():
