@@ -973,15 +973,56 @@ def stochasticGradientDescent(gradient_function, initial_point, learning_rate, i
     Returns:
     - The optimized point after performing stochastic gradient descent.
     """
-    point = initial_point
+    if not callable(gradient_function):
+        raise ValueError("Gradient function must be callable.")
+    if (
+        isinstance(learning_rate, bool)
+        or not isinstance(learning_rate, (int, float))
+        or not math.isfinite(learning_rate)
+        or learning_rate <= 0
+    ):
+        raise ValueError("Learning rate must be a positive finite number.")
+    if isinstance(iterations, bool) or not isinstance(iterations, int) or iterations < 0:
+        raise ValueError("Iterations must be a non-negative integer.")
+    if not isinstance(initial_point, (list, tuple)) or not initial_point:
+        raise ValueError("Initial point must be a non-empty list or tuple.")
 
+    point = list(initial_point)
     for _ in range(iterations):
-        # Randomly sample a data point (or mini-batch) for stochastic update
-        sampled_point = random.choice(point)  # Assuming point is a list of data points
+        sampled_point = random.choice(point)
         gradient = gradient_function(sampled_point)
-        point = [p - learning_rate * g for p, g in zip(point, gradient)]
+        index = point.index(sampled_point)
 
-    return point
+        if isinstance(sampled_point, (int, float)) and not isinstance(sampled_point, bool):
+            if (
+                isinstance(gradient, (list, tuple))
+                and len(gradient) == 1
+            ):
+                gradient = gradient[0]
+            if (
+                isinstance(gradient, bool)
+                or not isinstance(gradient, (int, float))
+                or not math.isfinite(gradient)
+            ):
+                raise ValueError("Gradient function must return a finite number.")
+            point[index] = sampled_point - learning_rate * gradient
+        else:
+            if not isinstance(sampled_point, (list, tuple)):
+                raise ValueError("Data points must be numbers or lists/tuples of numbers.")
+            if not isinstance(gradient, (list, tuple)) or len(gradient) != len(sampled_point):
+                raise ValueError("Gradient function must return one value per coordinate.")
+            updated = []
+            for coordinate, component in zip(sampled_point, gradient):
+                if (
+                    isinstance(component, bool)
+                    or not isinstance(component, (int, float))
+                    or not math.isfinite(component)
+                ):
+                    raise ValueError("Gradient function must return finite numbers.")
+                updated.append(coordinate - learning_rate * component)
+            point[index] = tuple(updated) if isinstance(sampled_point, tuple) else updated
+
+    return tuple(point) if isinstance(initial_point, tuple) else point
 
 def decisionTreeLearning(data, labels, depth=0, max_depth=None):
     """
