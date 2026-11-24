@@ -1549,7 +1549,6 @@ plt.scatter(x, y, c=labels, s=50, cmap='viridis')
 plt.show()
 
 
-def clustering():
 
 def agglomartiveClustering():
 
@@ -1559,4 +1558,45 @@ def DBSCAN():
 
 def affinityPropogation():
 
-def meanShiftClustering():
+import numpy as np
+import matplotlib.pyplot as plt
+
+class MeanShift:
+    def __init__(self, radius=4, max_iter=10):
+        self.radius = radius
+        self.max_iter = max_iter
+
+    def fit(self, data):
+        centroids = {i: data[i].copy() for i in range(len(data))}
+        for _ in range(self.max_iter):
+            new_centroids = []
+            for c in centroids.values():
+                neighbors = [
+                    x for x in data
+                    if np.linalg.norm(x - c) < self.radius
+                ]
+                if neighbors:
+                    new_c = np.mean(neighbors, axis=0)
+                    new_centroids.append(new_c)
+                else:
+                    new_centroids.append(c)
+            centroids = {i: np.array(new_centroids[i]) for i in range(len(new_centroids))}
+            if np.allclose(list(centroids.values()), list(centroids.values())[:-1], equal_nan=True):
+                break
+        return centroids
+
+# Example usage
+np.random.seed(0)
+X = np.array([[1, 2], [1.5, 1.8], [5, 8], [8, 8], [1, 0.6],
+              [9, 11], [8, 2], [10, 2], [9, 3]])
+
+ms = MeanShift(radius=2.5, max_iter=20)
+centers = ms.fit(X)
+
+print("Cluster centers:\n", centers)
+
+# Optional: plot
+plt.scatter(X[:,0], X[:,1], s=150)
+for c in centers:
+    plt.scatter(c[0], c[1], s=100, marker='x')
+plt.show()
