@@ -6,6 +6,7 @@ from algorithms import (
     dijikstra,
     euclideanAlgorithm,
     geneticAlgorithm,
+    gradientDescent,
     kNearestNeighbors,
     miniMaxAlgorithm,
     simulatedAnnealing,
@@ -30,6 +31,28 @@ class IntegerState:
 
 
 class AdditionalAlgorithmTests(unittest.TestCase):
+    def test_gradient_descent_minimizes_scalar_quadratic(self):
+        result = gradientDescent(lambda point: 2 * (point - 3), -8.0, 0.1, 25)
+
+        self.assertAlmostEqual(result, 2.958443, places=6)
+        self.assertAlmostEqual((result - 3) ** 2, 0.001727, places=6)
+
+    def test_gradient_descent_supports_vectors_without_mutating_input(self):
+        initial = [0.0, 4.0]
+
+        result = gradientDescent(lambda point: [2 * point[0], 2 * (point[1] - 3)], initial, 0.1, 10)
+
+        self.assertEqual(initial, [0.0, 4.0])
+        self.assertEqual(len(result), 2)
+        self.assertAlmostEqual(result[0], 0.0)
+        self.assertAlmostEqual(result[1], 3.0, places=6)
+
+    def test_gradient_descent_validates_parameters(self):
+        with self.assertRaisesRegex(ValueError, "Learning rate"):
+            gradientDescent(lambda point: 1, 0, 0, 10)
+        with self.assertRaisesRegex(ValueError, "Iterations"):
+            gradientDescent(lambda point: 1, 0, 0.1, -1)
+
     def test_genetic_algorithm_evolves_binary_string_and_records_trace(self):
         population = ["00", "00", "00", "00"]
         trace = []

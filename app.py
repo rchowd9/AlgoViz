@@ -357,11 +357,11 @@ with algorithms_tab:
         iterations = st.slider("Iterations", 1, 100, 25, key="gradient_iterations")
         if st.button("Run gradient descent", type="primary"):
             point = gradientDescent(
-                lambda coordinates: [2 * (coordinates[0] - 3)],
-                [initial_point],
+                lambda position: 2 * (position - 3),
+                initial_point,
                 learning_rate,
                 iterations,
-            )[0]
+            )
             st.metric("Final position", f"{point:.6f}")
             st.metric("Objective value", f"{(point - 3) ** 2:.6f}")
 
