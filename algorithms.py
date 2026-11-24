@@ -1493,7 +1493,6 @@ if __name__ == "__main__":
 
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 def euclidean_distance(p1, p2):
     return np.linalg.norm(p1 - p2)
@@ -1556,10 +1555,65 @@ def DivisiveClustering():
 
 def DBSCAN():
 
-def affinityPropogation():
+def affinity_propagation(S, max_iter=200, damping=0.5, convergence_iter=15):
+    """
+    Affinity Propagation clustering from scratch.
+    
+    Parameters:
+        S (ndarray): Similarity matrix (NxN), where S[i, j] is the similarity between points i and j.
+        max_iter (int): Maximum number of iterations.
+        damping (float): Damping factor between 0.5 and 1 to avoid oscillations.
+        convergence_iter (int): Number of iterations with unchanged exemplars to declare convergence.
+    
+    Returns:
+        cluster_centers_indices (list): Indices of cluster centers.
+        labels (ndarray): Cluster label for each point.
+    """
+    N = S.shape[0]
+    # Responsibility matrix
+    R = np.zeros((N, N))
+    # Availability matrix
+    A = np.zeros((N, N))
+    
+    # Track convergence
+    exemplars_history = []
+    
+    for iteration in range(max_iter):
+        # Update responsibilities
+        for i in range(N):
+            for k in range(N):
+                # Max over all other k' except k
+                max_val = np.max(A[i, :] + S[i, :])
+                max_val2 = np.max(np.delete(A[i, :] + S[i, :], k))
+                R[i, k] = damping * R[i, k] + (1 - damping) * (S[i, k] - max_val2)
+        
+        # Update availabilities
+        for k in range(N):
+            for i in range(N):
+                if i == k:
+                    A[k, k] = damping * A[k, k] + (1 - damping) * np.sum(np.maximum(R[:, k], 0) - np.maximum(R[k, k], 0))
+                else:
+                    A[i, k] = damping * A[i, k] + (1 - damping) * min(0, R[k, k] + np.sum(np.maximum(R[np.arange(N) != i, k], 0)))
+        
+        # Check convergence
+        E = (A + R) > 0
+        exemplars = np.where(np.diag(E))[0]
+        exemplars_history.append(exemplars)
+        
+        if iteration >= convergence_iter:
+            if np.all(exemplars_history[-convergence_iter] == exemplars):
+                break
+    
+    # Assign labels
+    if len(exemplars) == 0:
+        labels = np.zeros(N, dtype=int)
+        cluster_centers_indices = []
+    else:
+        labels = np.array([exemplars[np.argmax(S[i, exemplars])] for i in range(N)])
+        cluster_centers_indices = exemplars.tolist()
+    
+    return cluster_centers_indices, labels
 
-import numpy as np
-import matplotlib.pyplot as plt
 
 class MeanShift:
     def __init__(self, radius=4, max_iter=10):
