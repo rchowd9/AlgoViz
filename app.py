@@ -1,6 +1,7 @@
 import json
 import random
 
+import altair as alt
 import streamlit as st
 
 from algorithms import (
@@ -356,14 +357,69 @@ with algorithms_tab:
         learning_rate = st.slider("Learning rate", 0.01, 0.5, 0.1, key="gradient_rate")
         iterations = st.slider("Iterations", 1, 100, 25, key="gradient_iterations")
         if st.button("Run gradient descent", type="primary"):
+            descent_path = []
             point = gradientDescent(
                 lambda position: 2 * (position - 3),
                 initial_point,
                 learning_rate,
                 iterations,
+                trace=descent_path,
             )
+            st.session_state["gradient_descent_result"] = {
+                "path": descent_path,
+                "final_position": point,
+                "learning_rate": learning_rate,
+            }
+
+        descent_result = st.session_state.get("gradient_descent_result")
+        if descent_result:
+            descent_path = descent_result["path"]
+            point = descent_result["final_position"]
             st.metric("Final position", f"{point:.6f}")
             st.metric("Objective value", f"{(point - 3) ** 2:.6f}")
+
+            lower = min(-10.0, min(descent_path) - 1)
+            upper = max(10.0, max(descent_path) + 1)
+            objective_curve = [
+                {
+                    "position": lower + (upper - lower) * index / 100,
+                    "objective": (lower + (upper - lower) * index / 100 - 3) ** 2,
+                }
+                for index in range(101)
+            ]
+            descent_steps = [
+                {
+                    "iteration": index,
+                    "position": position,
+                    "objective": (position - 3) ** 2,
+                }
+                for index, position in enumerate(descent_path)
+            ]
+            curve = alt.Chart(alt.Data(values=objective_curve)).mark_line(
+                color="#9a9a9a",
+                strokeWidth=2,
+            ).encode(
+                x=alt.X("position:Q", title="Position x"),
+                y=alt.Y("objective:Q", title="Objective f(x)"),
+            )
+            steps = alt.Chart(alt.Data(values=descent_steps)).mark_line(
+                color="#cc3347",
+                point=True,
+            ).encode(
+                x="position:Q",
+                y="objective:Q",
+                order="iteration:Q",
+                tooltip=[
+                    alt.Tooltip("iteration:Q", title="Iteration"),
+                    alt.Tooltip("position:Q", title="Position", format=".6f"),
+                    alt.Tooltip("objective:Q", title="Objective", format=".6f"),
+                ],
+            )
+            st.caption(
+                f"Optimization path with learning rate {descent_result['learning_rate']:.2f}; "
+                "hover over a point to inspect each iteration."
+            )
+            st.altair_chart(curve + steps, use_container_width=True)
 
 with optimization_tab:
     st.subheader("Hill climbing on a simple objective")

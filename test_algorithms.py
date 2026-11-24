@@ -37,6 +37,15 @@ class AdditionalAlgorithmTests(unittest.TestCase):
         self.assertAlmostEqual(result, 2.958443, places=6)
         self.assertAlmostEqual((result - 3) ** 2, 0.001727, places=6)
 
+    def test_gradient_descent_records_each_point_in_its_trace(self):
+        trace = []
+
+        result = gradientDescent(lambda point: 2 * (point - 3), -8.0, 0.1, 2, trace=trace)
+
+        self.assertEqual(len(trace), 3)
+        self.assertEqual(trace[0], -8.0)
+        self.assertAlmostEqual(trace[-1], result)
+
     def test_gradient_descent_supports_vectors_without_mutating_input(self):
         initial = [0.0, 4.0]
 

@@ -881,7 +881,7 @@ def CART(data, labels, depth=0, max_depth=None):
     best_feature = None
     best_splits = None
 
-def gradientDescent(gradient_function, initial_point, learning_rate, iterations):
+def gradientDescent(gradient_function, initial_point, learning_rate, iterations, trace=None):
     """
     Implements the gradient descent optimization algorithm.
 
@@ -890,6 +890,7 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
     - initial_point: The starting point for the optimization.
     - learning_rate: The step size for each iteration.
     - iterations: The number of iterations to perform.
+    - trace: Optional list to receive the initial point and each updated point.
 
     Returns:
     - The optimized point after performing gradient descent.
@@ -911,6 +912,8 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
         point = initial_point
         if not math.isfinite(point):
             raise ValueError("Initial point must contain finite numbers.")
+        if trace is not None:
+            trace.append(point)
 
         for _ in range(iterations):
             gradient = gradient_function(point)
@@ -925,6 +928,8 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
             point -= learning_rate * gradient
             if not math.isfinite(point):
                 raise ValueError("Gradient descent produced a non-finite point.")
+            if trace is not None:
+                trace.append(point)
         return point
 
     if not isinstance(initial_point, (list, tuple)):
@@ -940,6 +945,8 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
             or not math.isfinite(coordinate)
         ):
             raise ValueError("Initial point must contain finite numbers.")
+    if trace is not None:
+        trace.append(point.copy())
 
     for _ in range(iterations):
         gradient = gradient_function(point)
@@ -958,6 +965,8 @@ def gradientDescent(gradient_function, initial_point, learning_rate, iterations)
                 raise ValueError("Gradient descent produced a non-finite point.")
             updated.append(next_coordinate)
         point = updated
+        if trace is not None:
+            trace.append(point.copy())
 
     return tuple(point) if isinstance(initial_point, tuple) else point
 
