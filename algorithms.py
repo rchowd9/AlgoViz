@@ -1229,54 +1229,62 @@ class AdaBoost:
         final_pred = np.sign(np.sum(stump_preds, axis=0))
         return final_pred
 
-import numpy as np
-
 def gradient_boosting(X, y, n_estimators=10, learning_rate=0.1, max_depth=3):
-    from sklearn.tree import DecisionTreeRegressor
-
-    # Normalize for stability
-    X = np.float32(X)
-    y = np.float32(y)
-
-    # Initial prediction (mean)
-    predictions = np.full(X.shape[0], np.mean(y))
-
-    for i in range(n_estimators):
-        # Compute residuals (negative gradient for squared loss)
-        residuals = y - predictions
-
-        # Fit weak learner to residuals
-        tree = DecisionTreeRegressor(max_depth=max_depth, random_state=0)
-        tree.fit(X, residuals)
-
-        # Update predictions
-        predictions += learning_rate * tree.predict(X)
-
+    """Fit shallow regression trees to squared-error residuals and return fitted values."""
+    features = np.asarray(X, dtype=float)
+    targets = np.asarray(y, dtype=float)
+    if features.ndim != 2 or not len(features) or features.shape[1] == 0:
+        raise ValueError("X must be a non-empty two-dimensional array.")
+    if targets.ndim != 1 or len(targets) != len(features):
+        raise ValueError("y must contain one target for each row in X.")
+    if not np.all(np.isfinite(features)) or not np.all(np.isfinite(targets)):
+        raise ValueError("X and y must contain only finite numbers.")
+    if isinstance(n_estimators, bool) or not isinstance(n_estimators, int) or n_estimators < 1:
+        raise ValueError("n_estimators must be a positive integer.")
+    if isinstance(max_depth, bool) or not isinstance(max_depth, int) or max_depth < 0:
+        raise ValueError("max_depth must be a non-negative integer.")
+    if isinstance(learning_rate, bool) or not isinstance(learning_rate, numbers.Real) or learning_rate <= 0:
+        raise ValueError("learning_rate must be positive.")
+    predictions = np.full(len(targets), targets.mean(), dtype=float)
+    for _ in range(n_estimators):
+        tree = RegressionTree(max_depth=max_depth)
+        tree.fit(features, targets - predictions)
+        predictions += learning_rate * tree.predict(features)
     return predictions
-
-import numpy as np
 
 # -----------------------------
 # Simple CART Regression Tree
 # -----------------------------
 class RegressionTree:
     def __init__(self, max_depth=3, min_samples_split=2):
+        if isinstance(max_depth, bool) or not isinstance(max_depth, int) or max_depth < 0:
+            raise ValueError("max_depth must be a non-negative integer.")
+        if isinstance(min_samples_split, bool) or not isinstance(min_samples_split, int) or min_samples_split < 2:
+            raise ValueError("min_samples_split must be an integer of at least 2.")
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.tree = None
 
     def fit(self, X, y):
-        self.tree = self._build_tree(X, y, depth=0)
+        features = np.asarray(X, dtype=float)
+        targets = np.asarray(y, dtype=float)
+        if features.ndim != 2 or not len(features) or features.shape[1] == 0:
+            raise ValueError("X must be a non-empty two-dimensional array.")
+        if targets.ndim != 1 or len(targets) != len(features):
+            raise ValueError("y must contain one target for each row in X.")
+        if not np.all(np.isfinite(features)) or not np.all(np.isfinite(targets)):
+            raise ValueError("X and y must contain only finite numbers.")
+        self.tree = self._build_tree(features, targets, depth=0)
+        return self
 
     def _build_tree(self, X, y, depth):
-        # Stop conditions
-        if depth >= self.max_depth or len(y) < self.min_samples_split:
+        if depth >= self.max_depth or len(y) < self.min_samples_split or np.all(y == y[0]):
             return np.mean(y)
 
-        # Find best split
         best_feat, best_thresh, best_loss = None, None, float('inf')
         for feat_idx in range(X.shape[1]):
-            thresholds = np.unique(X[:, feat_idx])
+            values = np.unique(X[:, feat_idx])
+            thresholds = (values[:-1] + values[1:]) / 2
             for thresh in thresholds:
                 left_mask = X[:, feat_idx] <= thresh
                 right_mask = ~left_mask
@@ -1289,14 +1297,13 @@ class RegressionTree:
         if best_feat is None:
             return np.mean(y)
 
-        # Split recursively
         left_mask = X[:, best_feat] <= best_thresh
         right_mask = ~left_mask
         return {
-            'feature': best_feat,
-            'threshold': best_thresh,
-            'left': self._build_tree(X[left_mask], y[left_mask], depth + 1),
-            'right': self._build_tree(X[right_mask], y[right_mask], depth + 1)
+            "feature": best_feat,
+            "threshold": best_thresh,
+            "left": self._build_tree(X[left_mask], y[left_mask], depth + 1),
+            "right": self._build_tree(X[right_mask], y[right_mask], depth + 1),
         }
 
     def _mse(self, y):
@@ -1311,7 +1318,12 @@ class RegressionTree:
             return self.predict_row(row, node['right'])
 
     def predict(self, X):
-        return np.array([self.predict_row(row, self.tree) for row in X])
+        if self.tree is None:
+            raise ValueError("The regression tree must be fitted before prediction.")
+        features = np.asarray(X, dtype=float)
+        if features.ndim != 2 or features.shape[1] == 0:
+            raise ValueError("X must be a two-dimensional array.")
+        return np.asarray([self.predict_row(row, self.tree) for row in features])
 
 
 # -----------------------------
@@ -1327,26 +1339,36 @@ class XGBoostScratch:
         self.base_prediction = None
 
     def fit(self, X, y):
-        # Initial prediction is mean of y
-        self.base_prediction = np.mean(y)
-        y_pred = np.full(y.shape, self.base_prediction)
+        features = np.asarray(X, dtype=float)
+        targets = np.asarray(y, dtype=float)
+        if features.ndim != 2 or not len(features) or features.shape[1] == 0:
+            raise ValueError("X must be a non-empty two-dimensional array.")
+        if targets.ndim != 1 or len(targets) != len(features):
+            raise ValueError("y must contain one target for each row in X.")
+        if isinstance(self.n_estimators, bool) or not isinstance(self.n_estimators, int) or self.n_estimators < 1:
+            raise ValueError("n_estimators must be a positive integer.")
+        if isinstance(self.learning_rate, bool) or not isinstance(self.learning_rate, numbers.Real) or self.learning_rate <= 0:
+            raise ValueError("learning_rate must be positive.")
+        self.base_prediction = float(targets.mean())
+        y_pred = np.full(len(targets), self.base_prediction)
+        self.trees = []
 
         for _ in range(self.n_estimators):
-            # Compute residuals (negative gradient for MSE loss)
-            residuals = y - y_pred
-
-            # Fit regression tree to residuals
             tree = RegressionTree(max_depth=self.max_depth, min_samples_split=self.min_samples_split)
-            tree.fit(X, residuals)
+            tree.fit(features, targets - y_pred)
             self.trees.append(tree)
-
-            # Update predictions
-            y_pred += self.learning_rate * tree.predict(X)
+            y_pred += self.learning_rate * tree.predict(features)
+        return self
 
     def predict(self, X):
-        y_pred = np.full(X.shape[0], self.base_prediction)
+        if self.base_prediction is None:
+            raise ValueError("The model must be fitted before prediction.")
+        features = np.asarray(X, dtype=float)
+        if features.ndim != 2:
+            raise ValueError("X must be a two-dimensional array.")
+        y_pred = np.full(len(features), self.base_prediction)
         for tree in self.trees:
-            y_pred += self.learning_rate * tree.predict(X)
+            y_pred += self.learning_rate * tree.predict(features)
         return y_pred
 
 class isolationTree:
@@ -1360,27 +1382,32 @@ class isolationTree:
         self.size = 0
 
     def fit(self, X):
+        X = np.asarray(X, dtype=float)
+        if X.ndim != 2:
+            raise ValueError("X must be a two-dimensional array.")
         self.size = len(X)
 
-        # Stop conditions: max depth reached or only one sample
-        if self.depth >= self.max_depth or self.size <= 1:
+        if self.max_depth is None:
+            self.max_depth = max(1, math.ceil(math.log2(max(self.size, 2))))
+        if self.depth >= self.max_depth or self.size <= 1 or X.shape[1] == 0:
             return
 
-        # Randomly choose an attribute (column)
-        self.split_attr = random.randint(0, X.shape[1] - 1)
-
-        # Randomly choose a split value between min and max of that attribute
+        splittable = [
+            index for index in range(X.shape[1])
+            if X[:, index].min() < X[:, index].max()
+        ]
+        if not splittable:
+            return
+        self.split_attr = random.choice(splittable)
         col_values = X[:, self.split_attr]
         min_val, max_val = col_values.min(), col_values.max()
-
-        if min_val == max_val:  # No split possible
-            return
-
         self.split_value = random.uniform(min_val, max_val)
-
-        # Split data into left and right subsets
         left_mask = col_values < self.split_value
         right_mask = ~left_mask
+        if not np.any(left_mask) or not np.any(right_mask):
+            self.split_attr = None
+            self.split_value = None
+            return
 
         self.left = isolationTree(depth=self.depth + 1, max_depth=self.max_depth)
         self.left.fit(X[left_mask])
