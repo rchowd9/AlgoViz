@@ -688,7 +688,7 @@ class DecisionTree:
 
     def fit(self, X, y):
         rows, labels = _validated_training_data(X, y)
-        self.classes_ = list(dict.fromkeys(labels))
+        self.classes_ = sorted(set(labels), key=str)
 
         def build(indices, depth):
             counts = {}
@@ -754,6 +754,35 @@ class DecisionTree:
             return node["value"]
 
         return np.asarray([classify(row) for row in rows])
+
+    def get_depth(self):
+        if self.tree is None:
+            raise ValueError("The decision tree must be fitted before inspecting it.")
+
+        def depth(node):
+            if "value" in node:
+                return 0
+            return 1 + max(depth(node["left"]), depth(node["right"]))
+
+        return depth(self.tree)
+
+    def get_n_leaves(self):
+        if self.tree is None:
+            raise ValueError("The decision tree must be fitted before inspecting it.")
+
+        def count(node):
+            if "value" in node:
+                return 1
+            return count(node["left"]) + count(node["right"])
+
+        return count(self.tree)
+
+    def score(self, X, y):
+        predictions = self.predict(X).tolist()
+        targets = y.tolist() if hasattr(y, "tolist") else list(y)
+        if not targets or len(predictions) != len(targets):
+            raise ValueError("X and y must contain the same non-zero number of samples.")
+        return sum(prediction == target for prediction, target in zip(predictions, targets)) / len(targets)
 
 
 def trainDecisionTreeClassifier(data, labels, max_depth=3):
