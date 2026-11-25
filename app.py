@@ -23,6 +23,7 @@ from visualization import (
     decision_tree_gini_details,
     decision_tree_source,
     hill_climb_trace,
+    kmeans_trace,
     parse_graph,
     search_array,
     search_graph,
@@ -439,13 +440,14 @@ with optimization_tab:
 
 with more_algorithms_tab:
     st.subheader("Explore additional algorithms")
-    dijkstra_tab, annealing_tab, game_search_tab, knn_tab, decision_tree_tab, genetic_tab, beam_tab = st.tabs(
+    dijkstra_tab, annealing_tab, game_search_tab, knn_tab, decision_tree_tab, kmeans_tab, genetic_tab, beam_tab = st.tabs(
         [
             "Dijkstra",
             "Simulated annealing",
             "Minimax",
             "Nearest neighbors",
             "Decision tree",
+            "K-means",
             "Genetic algorithm",
             "Local beam search",
         ]
@@ -726,6 +728,107 @@ with more_algorithms_tab:
             )
         else:
             st.info("Enter labeled points and train the classifier to visualize its decision tree.")
+
+    with kmeans_tab:
+        st.write("Group two-dimensional points into clusters and inspect each centroid update.")
+        with st.form("kmeans-controls"):
+            kmeans_text = st.text_area(
+                "Points (x, y)",
+                "0, 0\n0, 1\n1, 0\n10, 10\n10, 11\n11, 10",
+                help="Enter one two-dimensional point per line, separated by a comma.",
+            )
+            kmeans_count = st.slider("Number of clusters", 1, 6, 2, key="kmeans_cluster_count")
+            submitted_kmeans = st.form_submit_button("Run K-means", type="primary")
+
+        if submitted_kmeans:
+            try:
+                kmeans_points = []
+                for line_number, line in enumerate(kmeans_text.splitlines(), start=1):
+                    if not line.strip():
+                        continue
+                    fields = [field.strip() for field in line.split(",")]
+                    if len(fields) != 2:
+                        raise ValueError(
+                            f"Point row {line_number} must contain exactly x and y."
+                        )
+                    try:
+                        kmeans_points.append([float(fields[0]), float(fields[1])])
+                    except ValueError as error:
+                        raise ValueError(
+                            f"Point row {line_number} must have numeric x and y values."
+                        ) from error
+                if not kmeans_points:
+                    raise ValueError("Enter at least one point.")
+                st.session_state["kmeans_result"] = kmeans_trace(
+                    kmeans_points,
+                    int(kmeans_count),
+                )
+            except ValueError as error:
+                st.error(f"Could not run K-means: {error}")
+
+        kmeans_result = st.session_state.get("kmeans_result")
+        if kmeans_result:
+            kmeans_step = st.slider(
+                "Clustering iteration",
+                0,
+                len(kmeans_result) - 1,
+                len(kmeans_result) - 1,
+                key="kmeans_trace_step",
+            )
+            state = kmeans_result[kmeans_step]
+            first, second = st.columns(2)
+            first.metric("Iteration", state["iteration"])
+            second.metric("Inertia", f"{state['inertia']:.3f}")
+            st.caption(state["description"])
+
+            chart_rows = [
+                {
+                    "x": point[0],
+                    "y": point[1],
+                    "Cluster": f"Cluster {label + 1}",
+                    "Kind": "Point",
+                }
+                for point, label in zip(state["points"], state["labels"])
+            ]
+            chart_rows.extend(
+                {
+                    "x": centroid[0],
+                    "y": centroid[1],
+                    "Cluster": f"Cluster {cluster + 1}",
+                    "Kind": "Centroid",
+                }
+                for cluster, centroid in enumerate(state["centroids"])
+            )
+            kmeans_chart = alt.Chart(alt.Data(values=chart_rows)).mark_point().encode(
+                x=alt.X("x:Q", title="x"),
+                y=alt.Y("y:Q", title="y"),
+                color=alt.Color("Cluster:N"),
+                shape=alt.Shape("Kind:N", legend=None),
+                size=alt.Size(
+                    "Kind:N",
+                    scale=alt.Scale(domain=["Point", "Centroid"], range=[80, 260]),
+                    legend=None,
+                ),
+                tooltip=["x:Q", "y:Q", "Cluster:N", "Kind:N"],
+            )
+            st.altair_chart(kmeans_chart, use_container_width=True)
+            st.dataframe(
+                [
+                    {
+                        "Point": index + 1,
+                        "x": point[0],
+                        "y": point[1],
+                        "Cluster": label + 1,
+                    }
+                    for index, (point, label) in enumerate(
+                        zip(state["points"], state["labels"])
+                    )
+                ],
+                hide_index=True,
+                use_container_width=True,
+            )
+        else:
+            st.info("Enter points and run K-means to visualize clusters and centroids.")
 
     with genetic_tab:
         st.write(
