@@ -23,7 +23,9 @@ strategies. The Streamlit UI includes:
   propagated scores, alpha-beta cutoffs and skipped branches, nearest-neighbor
   distances, and genetic-algorithm fitness. Train a scikit-learn decision tree
   from labeled 2D points and inspect its Graphviz visualization, depth, leaves,
-  training accuracy, and per-node Gini calculations. The graph-search view also
+  training accuracy, and per-node Gini calculations. Run K-means clustering on
+  editable 2D points and step through assignments, centroid positions, and
+  inertia. The graph-search view also
   shows the edge cost and cumulative path cost at every route step.
 - **TensorFlow:** train a small neural network on synthetic regression data and
   view its predictions and training-loss curve. TensorFlow is imported only
