@@ -1909,3 +1909,5 @@ def minimumSpanningTree():
 def FloydWarshall():
 
 def huffmanCompression():
+
+def bTree():
