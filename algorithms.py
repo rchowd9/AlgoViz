@@ -1900,7 +1900,22 @@ class MeanShift:
                 break
         return centroids
 
-def bellmanFord():
+def bellmanFord(vertices, edges, source):
+    dist = [float('inf')] * vertices
+    dist[source] = 0
+
+    # Relax all edges V - 1 times
+    for _ in range(vertices - 1):
+        for u, v, w in edges:
+            if dist[u] != float('inf') and dist[u] + w < dist[v]:
+                dist[v] = dist[u] + w
+
+    # Check for negative-weight cycles
+    for u, v, w in edges:
+        if dist[u] != float('inf') and dist[u] + w < dist[v]:
+            raise ValueError("Negative weight cycle detected")
+
+    return dist
 
 def topologicalSort():
 
