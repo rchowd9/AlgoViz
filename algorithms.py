@@ -2057,9 +2057,11 @@ def bTree(min_degree=2):
         def search(self, node, key):
             i = 0
 
-            while i < len(node.keys) and key > node.keysi += 1
+            while i < len(node.keys) and key > node.keys[i]:
+                i += 1
 
-            if i < len(node.keys) and key == node.keysreturn True
+            if i < len(node.keys) and key == node.keys[i]:
+                return True
 
             if node.leaf:
                 return False
