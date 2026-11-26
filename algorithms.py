@@ -1907,3 +1907,5 @@ def topologicalSort():
 def minimumSpanningTree():
 
 def FloydWarshall():
+
+def huffmanCompression():
