@@ -1951,7 +1951,32 @@ def topologicalSort(graph):
 
     return result
 
-def minimumSpanningTree():
+def minimumSpanningTree(vertices, edges):
+    parent = list(range(vertices))
+
+    def find(x):
+        if parent[x] != x:
+            parent[x] = find(parent[x])
+        return parent[x]
+
+    def union(a, b):
+        parent[find(a)] = find(b)
+
+    edges.sort(key=lambda edge: edge[2])
+
+    mst = []
+    total_weight = 0
+
+    for u, v, weight in edges:
+        if find(u) != find(v):
+            union(u, v)
+            mst.append((u, v, weight))
+            total_weight += weight
+
+    return {
+        "edges": mst,
+        "total_weight": total_weight
+    }
 
 def FloydWarshall():
 
