@@ -2042,4 +2042,31 @@ def huffmanCompression(text):
         "encoded": encoded
     }
 
-def bTree():
+def bTree(min_degree=2):
+    class BTreeNode:
+        def __init__(self, leaf=True):
+            self.leaf = leaf
+            self.keys = []
+            self.children = []
+
+    class BTree:
+        def __init__(self, degree):
+            self.degree = degree
+            self.root = BTreeNode()
+
+        def search(self, node, key):
+            i = 0
+
+            while i < len(node.keys) and key > node.keysi += 1
+
+            if i < len(node.keys) and key == node.keysreturn True
+
+            if node.leaf:
+                return False
+
+            return self.search(node.children[i], key)
+
+        def contains(self, key):
+            return self.search(self.root, key)
+
+    return BTree(min_degree)
