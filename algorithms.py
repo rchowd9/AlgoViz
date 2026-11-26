@@ -1997,6 +1997,49 @@ def FloydWarshall(matrix):
 
     return dist
 
-def huffmanCompression():
+import heapq
+
+def huffmanCompression(text):
+    if not text:
+        return {}
+
+    freq = {}
+
+    for char in text:
+        freq[char] = freq.get(char, 0) + 1
+
+    heap = [[count, [char, ""]] for char, count in freq.items()]
+
+    heapq.heapify(heap)
+
+    while len(heap) > 1:
+        left = heapq.heappop(heap)
+        right = heapq.heappop(heap)
+
+        for pair in left[1:]:
+            pair[1] = "0" + pair[1]
+
+        for pair in right[1:]:
+            pair[1] = "1" + pair[1]
+
+        heapq.heappush(
+            heap,
+            [left[0] + right[0]] + left[1:] + right[1:]
+        )
+
+    codes = {}
+
+    for char, code in heap[0][1:]:
+        codes[char] = code
+
+    encoded = ""
+
+    for char in text:
+        encoded += codes[char]
+
+    return {
+        "codes": codes,
+        "encoded": encoded
+    }
 
 def bTree():
