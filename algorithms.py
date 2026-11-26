@@ -1917,7 +1917,39 @@ def bellmanFord(vertices, edges, source):
 
     return dist
 
-def topologicalSort():
+from collections import deque
+
+def topologicalSort(graph):
+    indegree = {}
+
+    for node in graph:
+        indegree[node] = indegree.get(node, 0)
+
+        for neighbor in graph[node]:
+            indegree[neighbor] = indegree.get(neighbor, 0) + 1
+
+    queue = deque()
+
+    for node in indegree:
+        if indegree[node] == 0:
+            queue.append(node)
+
+    result = []
+
+    while queue:
+        node = queue.popleft()
+        result.append(node)
+
+        for neighbor in graph.get(node, []):
+            indegree[neighbor] -= 1
+
+            if indegree[neighbor] == 0:
+                queue.append(neighbor)
+
+    if len(result) != len(indegree):
+        raise ValueError("Graph contains a cycle")
+
+    return result
 
 def minimumSpanningTree():
 
