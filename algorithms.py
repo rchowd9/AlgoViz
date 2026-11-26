@@ -102,6 +102,8 @@ def geneticAlgorithm(population, fitness_function, generations, mutation_rate, t
 
     return best_individual
 
+def bellmanFord():
+
 def miniMaxAlgorithm(state, depth, maximizing_player, evaluate_function, trace=None):
     """
     Implements the minimax algorithm for decision making in two-player games.
